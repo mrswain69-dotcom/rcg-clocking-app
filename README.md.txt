@@ -31,6 +31,11 @@ Backend
 Deployment
 - Vercel
 
+Production URL
+- https://rcgclocking.app
+
 ---
 
 # Project Structure
+
+The production application lives in `src/` with Supabase migrations and Edge Functions under `supabase/`.
