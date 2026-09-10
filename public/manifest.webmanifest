@@ -1,0 +1,17 @@
+{
+  "name": "RCG Clocking App",
+  "short_name": "RCG Clocking",
+  "description": "Clock in and out at Redcatch Community Garden.",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#f7f3ea",
+  "theme_color": "#d7652f",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

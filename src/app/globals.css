@@ -1,0 +1,78 @@
+@import "tailwindcss";
+
+:root {
+  --rcg-orange: #d7652f;
+  --rcg-orange-dark: #a8461f;
+  --rcg-green: #31543c;
+  --rcg-cream: #f7f3ea;
+  --rcg-ink: #253128;
+  --rcg-muted: #6d756d;
+  --rcg-card: #fffdf7;
+  --rcg-border: #ded8ca;
+}
+
+* { box-sizing: border-box; }
+html { background: var(--rcg-cream); }
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--rcg-ink);
+  background:
+    radial-gradient(circle at top right, rgba(215, 101, 47, .12), transparent 30rem),
+    var(--rcg-cream);
+  font-family: Arial, Helvetica, sans-serif;
+}
+button, input, select { font: inherit; }
+a { color: inherit; }
+
+.shell { width: min(1120px, calc(100% - 2rem)); margin-inline: auto; }
+.card {
+  border: 1px solid var(--rcg-border);
+  border-radius: 1.25rem;
+  background: var(--rcg-card);
+  box-shadow: 0 14px 40px rgba(57, 61, 48, .07);
+}
+.btn {
+  display: inline-flex;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  border-radius: .85rem;
+  border: 1px solid transparent;
+  padding: .7rem 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform .1s ease, opacity .1s ease;
+}
+.btn:active { transform: translateY(1px); }
+.btn:disabled { cursor: not-allowed; opacity: .55; }
+.btn-primary { background: var(--rcg-orange); color: white; }
+.btn-primary:hover { background: var(--rcg-orange-dark); }
+.btn-secondary { border-color: var(--rcg-border); background: white; color: var(--rcg-ink); }
+.input {
+  width: 100%;
+  min-height: 3rem;
+  border: 1px solid var(--rcg-border);
+  border-radius: .8rem;
+  background: white;
+  padding: .7rem .85rem;
+  outline: none;
+}
+.input:focus { border-color: var(--rcg-orange); box-shadow: 0 0 0 3px rgba(215, 101, 47, .14); }
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: #eef3eb;
+  color: var(--rcg-green);
+  padding: .3rem .65rem;
+  font-size: .8rem;
+  font-weight: 800;
+  text-transform: capitalize;
+}
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th, td { border-bottom: 1px solid var(--rcg-border); padding: .8rem .65rem; text-align: left; vertical-align: top; }
+th { color: var(--rcg-muted); font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; }
+.muted { color: var(--rcg-muted); }
