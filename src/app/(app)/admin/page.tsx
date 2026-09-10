@@ -7,10 +7,11 @@ export const metadata: Metadata = { title: "Admin" };
 
 export default async function AdminPage() {
   const { supabase } = await requireAdminProfile();
-  const { data: current = [] } = await supabase
+  const { data } = await supabase
     .from("current_on_site_view")
     .select("*")
     .order("clock_in_at", { ascending: true });
+  const current = data ?? [];
 
   return (
     <div className="space-y-6">

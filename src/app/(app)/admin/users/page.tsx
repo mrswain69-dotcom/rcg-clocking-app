@@ -7,10 +7,11 @@ export const metadata: Metadata = { title: "Manage users" };
 
 export default async function AdminUsersPage() {
   const { supabase } = await requireAdminProfile();
-  const { data: users = [] } = await supabase
+  const { data } = await supabase
     .from("profiles")
     .select("id,full_name,email,role,is_active,can_view_currently_on_site,can_use_kiosk,archived_at")
     .order("full_name");
+  const users = data ?? [];
 
   return (
     <div className="space-y-6">

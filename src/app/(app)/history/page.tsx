@@ -7,12 +7,13 @@ export const metadata: Metadata = { title: "Attendance history" };
 
 export default async function HistoryPage() {
   const { supabase, profile } = await requireProfile();
-  const { data: sessions = [] } = await supabase
+  const { data } = await supabase
     .from("sessions")
     .select("id,clock_in_at,clock_out_at,clock_in_method,clock_out_method")
     .eq("profile_id", profile.id)
     .order("clock_in_at", { ascending: false })
     .limit(500);
+  const sessions = data ?? [];
 
   const totalHours = sessions.reduce(
     (sum, session) => sum + durationHours(session.clock_in_at, session.clock_out_at),
