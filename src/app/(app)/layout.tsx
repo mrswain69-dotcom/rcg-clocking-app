@@ -4,6 +4,7 @@ import { requireProfile } from "@/lib/auth";
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { profile } = await requireProfile();
   const adminLike = ["owner", "admin", "developer"].includes(profile.role);
+  const canViewOnSite = adminLike || profile.can_view_currently_on_site;
 
   return (
     <div className="min-h-screen">
@@ -17,6 +18,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <nav className="flex flex-wrap items-center justify-end gap-2 text-sm font-bold">
             <Link className="rounded-xl px-3 py-2 hover:bg-black/5" href="/dashboard">Dashboard</Link>
             <Link className="rounded-xl px-3 py-2 hover:bg-black/5" href="/history">History</Link>
+            {canViewOnSite ? <Link className="rounded-xl px-3 py-2 hover:bg-black/5" href="/on-site">On site</Link> : null}
             <Link className="rounded-xl px-3 py-2 hover:bg-black/5" href="/account">Account</Link>
             {adminLike ? <Link className="rounded-xl px-3 py-2 hover:bg-black/5" href="/admin">Admin</Link> : null}
             <span className="badge hidden sm:inline-flex">{profile.role}</span>
