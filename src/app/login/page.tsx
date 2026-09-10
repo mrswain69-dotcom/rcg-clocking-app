@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { login } from "./actions";
 
 export const metadata: Metadata = { title: "Sign in" };
@@ -6,9 +7,9 @@ export const metadata: Metadata = { title: "Sign in" };
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; message?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, message } = await searchParams;
 
   return (
     <main className="shell flex min-h-screen items-center justify-center py-10">
@@ -24,32 +25,30 @@ export default async function LoginPage({
         </div>
 
         {error ? (
-          <p className="mb-5 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-            {error}
-          </p>
+          <p className="mb-5 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>
+        ) : null}
+        {message ? (
+          <p className="mb-5 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">{message}</p>
         ) : null}
 
         <form action={login} className="space-y-4">
           <div>
-            <label htmlFor="email" className="mb-1 block text-sm font-bold">
-              Email
-            </label>
+            <label htmlFor="email" className="mb-1 block text-sm font-bold">Email</label>
             <input className="input" id="email" name="email" type="email" autoComplete="email" required />
           </div>
           <div>
-            <label htmlFor="password" className="mb-1 block text-sm font-bold">
-              Password
-            </label>
+            <div className="mb-1 flex items-center justify-between gap-3">
+              <label htmlFor="password" className="block text-sm font-bold">Password</label>
+              <Link className="text-sm font-bold text-[var(--rcg-green)]" href="/forgot-password">Forgot password?</Link>
+            </div>
             <input className="input" id="password" name="password" type="password" autoComplete="current-password" required />
           </div>
-          <button className="btn-primary w-full" type="submit">
-            Sign in
-          </button>
+          <button className="btn btn-primary w-full" type="submit">Sign in</button>
         </form>
 
-        <a className="mt-5 block text-center text-sm font-bold text-[var(--rcg-green)]" href="/kiosk">
+        <Link className="mt-5 block text-center text-sm font-bold text-[var(--rcg-green)]" href="/kiosk">
           Use the on-site kiosk
-        </a>
+        </Link>
       </section>
     </main>
   );
