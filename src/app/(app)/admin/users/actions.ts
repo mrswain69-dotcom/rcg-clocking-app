@@ -3,33 +3,41 @@
 import { revalidatePath } from "next/cache";
 import { requireAdminProfile } from "@/lib/auth";
 
-export async function setUserActive(formData: FormData) {
-  const targetId = String(formData.get("profileId") ?? "");
-  const desiredActive = String(formData.get("active")) === "true";
-  if (!targetId) return;
-
-  const { supabase, profile: actor } = await requireAdminProfile();
-
-  const { data: target } = await supabase
-    .from("profiles")
-    .select("id,role")
-    .eq("id", targetId)
-    .single();
-
-  if (!target) return;
-  if (target.role === "owner" && actor.id !== target.id) {
-    throw new Error("The owner account cannot be archived by another administrator.");
-  }
-
-  const { error } = await supabase
-    .from("profiles")
-    .update({
-      is_active: desiredActive,
-      archived_at: desiredActive ? null : new Date().toISOString(),
-    })
-    .eq("id", targetId);
-
-  if (error) throw new Error("Unable to update this user.");
-
+async function invoke(body: Record<string, unknown>) {
+  const { supabase } = await requireAdminProfile();
+  const { data, error } = await supabase.functions.invoke("admin-user", { body });
+  if (error || !data?.success) throw new Error(data?.error || "Unable to complete the administrator action.");
   revalidatePath("/admin/users");
+}
+
+export async function createUser(formData: FormData) {
+  await invoke({
+    action: "create_user",
+    full_name: String(formData.get("fullName") ?? ""),
+    email: String(formData.get("email") ?? ""),
+    password: String(formData.get("password") ?? ""),
+    role: String(formData.get("role") ?? "user"),
+    short_code: String(formData.get("shortCode") ?? ""),
+    pin: String(formData.get("pin") ?? ""),
+  });
+}
+
+export async function setUserActive(formData: FormData) {
+  await invoke({ action: "set_active", profile_id: String(formData.get("profileId") ?? ""), active: String(formData.get("active")) === "true" });
+}
+
+export async function setUserRole(formData: FormData) {
+  await invoke({ action: "set_role", profile_id: String(formData.get("profileId") ?? ""), role: String(formData.get("role") ?? "user") });
+}
+
+export async function setPresenceVisibility(formData: FormData) {
+  await invoke({ action: "set_presence_visibility", profile_id: String(formData.get("profileId") ?? ""), enabled: String(formData.get("enabled")) === "true" });
+}
+
+export async function setKioskAccess(formData: FormData) {
+  await invoke({ action: "set_kiosk_access", profile_id: String(formData.get("profileId") ?? ""), enabled: String(formData.get("enabled")) === "true" });
+}
+
+export async function resetPin(formData: FormData) {
+  await invoke({ action: "reset_pin", profile_id: String(formData.get("profileId") ?? ""), pin: String(formData.get("pin") ?? "") });
 }
