@@ -17,9 +17,8 @@ begin
   end if;
 end $$;
 
--- The public RPC is callable only by service_role. It lets the Edge Function compare
--- the presented scheduler secret without exposing Vault through the Data API.
-create or replace function public.verify_alert_cron_secret(p_candidate text)
+-- Keep the SECURITY DEFINER Vault lookup in the non-exposed private schema.
+create or replace function private.verify_alert_cron_secret(p_candidate text)
 returns boolean
 language sql
 stable
@@ -35,6 +34,22 @@ as $$
     ),
     false
   )
+$$;
+
+revoke all on function private.verify_alert_cron_secret(text) from public;
+grant usage on schema private to service_role;
+grant execute on function private.verify_alert_cron_secret(text) to service_role;
+
+-- The exposed RPC is SECURITY INVOKER and callable only by service_role. The Edge
+-- Function uses its service-role client after validating the scheduler header.
+create or replace function public.verify_alert_cron_secret(p_candidate text)
+returns boolean
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  select private.verify_alert_cron_secret(p_candidate)
 $$;
 
 revoke all on function public.verify_alert_cron_secret(text) from public, anon, authenticated;
