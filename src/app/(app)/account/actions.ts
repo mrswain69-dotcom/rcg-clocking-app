@@ -13,7 +13,7 @@ export async function changePassword(formData: FormData) {
   if (password !== confirm) redirect(`/account?error=${encodeURIComponent("The two new passwords do not match.")}`);
 
   const { supabase } = await requireProfile();
-  const { error } = await supabase.auth.updateUser({ password, currentPassword });
+  const { error } = await supabase.auth.updateUser({ password, current_password: currentPassword });
   if (error) redirect(`/account?error=${encodeURIComponent("Current password was not accepted or the password could not be changed.")}`);
 
   redirect(`/account?message=${encodeURIComponent("Password changed successfully.")}`);
