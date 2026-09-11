@@ -10,11 +10,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const canViewOnSite = adminLike || profile.can_view_currently_on_site;
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen pb-20 md:pb-0">
       <RealtimeRefresh />
+
       <header className="app-header">
         <div className="shell app-header-inner">
-          <BrandLogo />
+          <BrandLogo compact />
 
           <nav className="desktop-nav" aria-label="Main navigation">
             <Link className="nav-link" href="/dashboard">Dashboard</Link>
@@ -25,7 +26,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             {developerLike ? <Link className="nav-link" href="/developer">Developer</Link> : null}
             <span className="role-pill">{profile.role}</span>
             <form action="/auth/signout" method="post">
-              <button className="btn btn-secondary !min-h-10 !px-3" type="submit">Sign out</button>
+              <button className="btn btn-secondary !min-h-10 !px-4" type="submit">Sign out</button>
             </form>
           </nav>
         </div>
@@ -33,15 +34,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
       <main className="shell app-main">{children}</main>
 
-      <nav className="mobile-nav" aria-label="Mobile navigation">
+      <nav className={`mobile-nav ${adminLike ? "mobile-nav-admin" : ""}`} aria-label="Mobile navigation">
         <Link href="/dashboard"><span className="mobile-nav-icon">⌂</span><span>Home</span></Link>
         <Link href="/history"><span className="mobile-nav-icon">▤</span><span>History</span></Link>
         {canViewOnSite ? (
-          <Link href="/on-site"><span className="mobile-nav-icon">◎</span><span>On Site</span></Link>
+          <Link href="/on-site"><span className="mobile-nav-icon">⌖</span><span>On Site</span></Link>
         ) : (
-          <Link href="/account"><span className="mobile-nav-icon">○</span><span>Account</span></Link>
+          <Link href="/account"><span className="mobile-nav-icon">◎</span><span>Account</span></Link>
         )}
-        <Link href={adminLike ? "/admin" : "/account"}><span className="mobile-nav-icon">•••</span><span>More</span></Link>
+        {canViewOnSite ? <Link href="/account"><span className="mobile-nav-icon">◎</span><span>Account</span></Link> : null}
+        {adminLike ? <Link href="/admin"><span className="mobile-nav-icon">⚙</span><span>Admin</span></Link> : null}
       </nav>
     </div>
   );
