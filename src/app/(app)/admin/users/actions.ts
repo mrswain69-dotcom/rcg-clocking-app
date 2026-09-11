@@ -8,6 +8,8 @@ async function invoke(body: Record<string, unknown>) {
   const { data, error } = await supabase.functions.invoke("admin-user", { body });
   if (error || !data?.success) throw new Error(data?.error || "Unable to complete the administrator action.");
   revalidatePath("/admin/users");
+  revalidatePath("/admin/reports");
+  revalidatePath("/admin/audit");
 }
 
 export async function createUser(formData: FormData) {
@@ -40,4 +42,12 @@ export async function setKioskAccess(formData: FormData) {
 
 export async function resetPin(formData: FormData) {
   await invoke({ action: "reset_pin", profile_id: String(formData.get("profileId") ?? ""), pin: String(formData.get("pin") ?? "") });
+}
+
+export async function deleteUser(formData: FormData) {
+  await invoke({
+    action: "delete_user",
+    profile_id: String(formData.get("profileId") ?? ""),
+    confirm_email: String(formData.get("confirmEmail") ?? ""),
+  });
 }
