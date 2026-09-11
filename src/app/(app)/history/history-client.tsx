@@ -38,8 +38,8 @@ export function HistoryExport({ sessions, from, to }: { sessions: Session[]; fro
   }
 
   return (
-    <button className="btn-secondary" type="button" onClick={downloadCsv} disabled={!sessions.length}>
-      Export CSV
+    <button className="btn btn-secondary" type="button" onClick={downloadCsv} disabled={!sessions.length}>
+      ↓ Export CSV
     </button>
   );
 }
