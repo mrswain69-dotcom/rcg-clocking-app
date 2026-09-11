@@ -1,8 +1,22 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="110" fill="#d7652f"/>
-  <path d="M118 178c58-77 218-86 284 10-13 82-62 152-146 198-84-43-129-112-138-208Z" fill="#fff3de"/>
-  <path d="M163 205c33-35 64-45 93-44-25 29-37 59-36 93-28-19-48-35-57-49Zm186 0c-33-35-64-45-93-44 25 29 37 59 36 93 28-19 48-35 57-49Z" fill="#d7652f"/>
-  <circle cx="213" cy="275" r="13" fill="#24362a"/>
-  <circle cx="299" cy="275" r="13" fill="#24362a"/>
-  <path d="M230 318c16 15 36 15 52 0" fill="none" stroke="#24362a" stroke-width="14" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Redcatch Community Garden staff fox</title>
+  <desc id="desc">An orange fox mascot wearing a green staff shirt.</desc>
+  <rect width="512" height="512" rx="92" fill="#fffdf8"/>
+  <g stroke="#222222" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M171 131 145 70l72 31c24-10 52-10 78 0l72-31-22 68c20 22 31 50 31 81 0 70-54 119-120 119s-120-49-120-119c0-34 13-64 35-88Z" fill="#ff5a17"/>
+    <path d="M154 152c15-25 36-43 63-51l-31-14-32 65Zm204 0c-14-25-35-43-63-51l31-14 32 65Z" fill="#fffdf8"/>
+    <circle cx="210" cy="203" r="8" fill="#222222" stroke="none"/>
+    <circle cx="302" cy="203" r="8" fill="#222222" stroke="none"/>
+    <path d="M239 235c10 8 24 8 34 0" fill="none"/>
+    <ellipse cx="256" cy="228" rx="16" ry="12" fill="#222222" stroke="none"/>
+    <path d="M176 290c24-21 136-21 160 0l-8 135c-47 26-97 26-144 0l-8-135Z" fill="#26943f"/>
+    <path d="M177 304c-24 8-38 25-43 53 17 4 35 2 50-8m151-45c24 8 38 25 43 53-17 4-35 2-50-8" fill="#ff5a17"/>
+    <path d="M207 421 194 458m111-37 13 37" fill="none"/>
+    <path d="M335 301c49-2 71-28 76-73 8-68 57-95 82-67 17 19 7 51-15 74 28 40 2 112-51 123-33 7-65-5-92-26" fill="#ff5a17"/>
+    <path d="M463 238c25-25 42-60 27-80-18-24-58-4-72 32 15 2 30 18 45 48Z" fill="#fffdf8"/>
+  </g>
+  <g fill="#ffffff" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">
+    <text x="256" y="345" font-size="28" font-weight="800">RCG</text>
+    <text x="256" y="371" font-size="14" font-weight="700">STAFF</text>
+  </g>
 </svg>
