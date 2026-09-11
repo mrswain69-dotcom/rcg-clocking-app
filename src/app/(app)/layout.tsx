@@ -34,7 +34,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
       <main className="shell app-main">{children}</main>
 
-      <nav className={`mobile-nav ${adminLike ? "mobile-nav-admin" : ""}`} aria-label="Mobile navigation">
+      <nav className="mobile-nav" aria-label="Mobile navigation">
         <Link href="/dashboard"><span className="mobile-nav-icon">⌂</span><span>Home</span></Link>
         <Link href="/history"><span className="mobile-nav-icon">▤</span><span>History</span></Link>
         {canViewOnSite ? (
@@ -42,8 +42,29 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         ) : (
           <Link href="/account"><span className="mobile-nav-icon">◎</span><span>Account</span></Link>
         )}
-        {canViewOnSite ? <Link href="/account"><span className="mobile-nav-icon">◎</span><span>Account</span></Link> : null}
-        {adminLike ? <Link href="/admin"><span className="mobile-nav-icon">⚙</span><span>Admin</span></Link> : null}
+
+        <details className="mobile-more">
+          <summary><span className="mobile-nav-icon">•••</span><span>More</span></summary>
+          <div className="mobile-more-menu">
+            {canViewOnSite ? <Link href="/account">◎ <span>Account</span></Link> : null}
+            {adminLike ? (
+              <>
+                <div className="mobile-more-heading">Admin</div>
+                <Link href="/admin">⚙ <span>Admin dashboard</span></Link>
+                <Link href="/admin/users">♟ <span>Users</span></Link>
+                <Link href="/admin/reports">▤ <span>Reports</span></Link>
+                <Link href="/admin/alerts">⚠ <span>After-hours safety</span></Link>
+                <Link href="/admin/audit">≡ <span>Audit log</span></Link>
+              </>
+            ) : null}
+            {developerLike ? (
+              <>
+                <div className="mobile-more-heading">Technical</div>
+                <Link href="/developer">⌘ <span>Developer diagnostics</span></Link>
+              </>
+            ) : null}
+          </div>
+        </details>
       </nav>
     </div>
   );
