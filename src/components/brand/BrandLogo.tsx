@@ -9,7 +9,7 @@ type Props = {
 export function BrandLogo({ href = "/dashboard", compact = false, className = "" }: Props) {
   const content = (
     <span className={`brand-lockup ${compact ? "brand-lockup-compact" : ""} ${className}`.trim()}>
-      <img className="brand-fox" src="/brand/staff-fox.svg" alt="Redcatch fox wearing a green staff shirt" />
+      <img className="brand-fox" src="/brand/staff-fox.png" alt="Redcatch fox wearing the green Community Garden staff shirt" />
       <span className="brand-copy">
         <span className="brand-name">Redcatch<br />Community Garden</span>
         <span className="brand-subtitle">Clocking app</span>
