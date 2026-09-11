@@ -1,0 +1,9 @@
+.mobile-nav.mobile-nav-admin { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.empty-state img { width: 5.5rem; height: 5rem; object-fit: contain; margin-bottom: .55rem; }
+.empty-state h3 { color: var(--rcg-green-dark); font-size: 1.2rem; font-weight: 900; }
+.empty-state p { margin-top: .25rem; max-width: 28rem; }
+
+@media (max-width: 420px) {
+  .mobile-nav.mobile-nav-admin { left: .35rem; right: .35rem; gap: .1rem; padding-inline: .25rem; }
+  .mobile-nav.mobile-nav-admin a { font-size: .61rem; }
+}
