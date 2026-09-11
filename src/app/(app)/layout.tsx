@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand/BrandLogo";
+import { MobileNav } from "@/components/mobile-nav";
 import { RealtimeRefresh } from "@/components/realtime-refresh";
 import { requireProfile } from "@/lib/auth";
 
@@ -34,38 +35,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
       <main className="shell app-main">{children}</main>
 
-      <nav className="mobile-nav" aria-label="Mobile navigation">
-        <Link href="/dashboard"><span className="mobile-nav-icon">⌂</span><span>Home</span></Link>
-        <Link href="/history"><span className="mobile-nav-icon">▤</span><span>History</span></Link>
-        {canViewOnSite ? (
-          <Link href="/on-site"><span className="mobile-nav-icon">⌖</span><span>On Site</span></Link>
-        ) : (
-          <Link href="/account"><span className="mobile-nav-icon">◎</span><span>Account</span></Link>
-        )}
-
-        <details className="mobile-more">
-          <summary><span className="mobile-nav-icon">•••</span><span>More</span></summary>
-          <div className="mobile-more-menu">
-            {canViewOnSite ? <Link href="/account">◎ <span>Account</span></Link> : null}
-            {adminLike ? (
-              <>
-                <div className="mobile-more-heading">Admin</div>
-                <Link href="/admin">⚙ <span>Admin dashboard</span></Link>
-                <Link href="/admin/users">♟ <span>Users</span></Link>
-                <Link href="/admin/reports">▤ <span>Reports</span></Link>
-                <Link href="/admin/alerts">⚠ <span>After-hours safety</span></Link>
-                <Link href="/admin/audit">≡ <span>Audit log</span></Link>
-              </>
-            ) : null}
-            {developerLike ? (
-              <>
-                <div className="mobile-more-heading">Technical</div>
-                <Link href="/developer">⌘ <span>Developer diagnostics</span></Link>
-              </>
-            ) : null}
-          </div>
-        </details>
-      </nav>
+      <MobileNav
+        canViewOnSite={canViewOnSite}
+        adminLike={adminLike}
+        developerLike={developerLike}
+      />
     </div>
   );
 }
