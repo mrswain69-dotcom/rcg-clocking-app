@@ -20,14 +20,14 @@ const brandFont = Libre_Baskerville({
 export const metadata: Metadata = {
   title: { default: "RCG Clocking App", template: "%s | RCG Clocking App" },
   description: "Clock in and out at Redcatch Community Garden.",
-  manifest: "/manifest.webmanifest",
+  manifest: "/manifest-v2.webmanifest",
   icons: {
     icon: [
-      { url: "/favicon.ico" },
-      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/brand/staff-fox.svg?v=4", type: "image/svg+xml" },
+      { url: "/brand/staff-fox.png?v=4", sizes: "320x320", type: "image/png" },
     ],
-    shortcut: [{ url: "/favicon.ico" }],
-    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+    shortcut: [{ url: "/brand/staff-fox.svg?v=4", type: "image/svg+xml" }],
+    apple: [{ url: "/apple-touch-icon.png?v=4", sizes: "180x180", type: "image/png" }],
   },
 };
 
