@@ -12,7 +12,7 @@ function csvCell(value: string) {
   return `"${value.replaceAll('"', '""')}"`;
 }
 
-export function HistoryExport({ sessions }: { sessions: Session[] }) {
+export function HistoryExport({ sessions, from, to }: { sessions: Session[]; from: string; to: string }) {
   function downloadCsv() {
     const rows = [
       ["Clock in", "Clock out", "Clock in method", "Clock out method"],
@@ -28,10 +28,9 @@ export function HistoryExport({ sessions }: { sessions: Session[] }) {
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
-    const today = new Date().toISOString().slice(0, 10);
 
     anchor.href = url;
-    anchor.download = `rcg-hours-${today}.csv`;
+    anchor.download = `rcg-hours-${from}_to_${to}.csv`;
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
