@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireAdminProfile } from "@/lib/auth";
 import { formatUkDateTime } from "@/lib/dates";
-import { createUser, resetPin, setKioskAccess, setPresenceVisibility, setUserActive, setUserRole } from "./actions";
+import { createUser, deleteUser, resetPin, setKioskAccess, setPresenceVisibility, setUserActive, setUserRole } from "./actions";
 
 export const metadata: Metadata = { title: "Manage users" };
 
@@ -44,7 +44,7 @@ export default async function AdminUsersPage() {
       <section className="card p-5 sm:p-6">
         <div className="table-wrap">
           <table>
-            <thead><tr><th>User</th><th>Role</th><th>Presence list</th><th>Kiosk</th><th>PIN</th><th>Status</th></tr></thead>
+            <thead><tr><th>User</th><th>Role</th><th>Presence list</th><th>Kiosk</th><th>PIN</th><th>Status</th>{actor.role === "owner" ? <th>Owner action</th> : null}</tr></thead>
             <tbody>
               {users.map((user) => (
                 <tr key={user.id}>
@@ -58,6 +58,7 @@ export default async function AdminUsersPage() {
                   <td><form action={setKioskAccess} className="flex gap-2"><input type="hidden" name="profileId" value={user.id} /><select className="input !min-h-9 !w-auto !py-1" name="enabled" defaultValue={String(user.can_use_kiosk)}><option value="true">Yes</option><option value="false">No</option></select><button className="btn btn-secondary !min-h-9 !px-3" type="submit">Save</button></form></td>
                   <td><form action={resetPin} className="flex min-w-48 gap-2"><input type="hidden" name="profileId" value={user.id} /><input className="input !min-h-9 !w-24 !py-1" name="pin" type="password" inputMode="numeric" pattern="[0-9]{4,6}" placeholder="4–6 digits" required /><button className="btn btn-secondary !min-h-9 !px-3" type="submit">Reset</button></form></td>
                   <td><div className="mb-2 text-sm">{user.is_active ? "Active" : `Archived ${formatUkDateTime(user.archived_at)}`}</div>{user.role !== "owner" ? <form action={setUserActive}><input type="hidden" name="profileId" value={user.id} /><input type="hidden" name="active" value={String(!user.is_active)} /><button className={user.is_active ? "btn btn-danger !min-h-9 !px-3" : "btn btn-secondary !min-h-9 !px-3"} type="submit">{user.is_active ? "Archive" : "Reactivate"}</button></form> : <span className="text-xs font-bold text-[var(--rcg-muted)]">Protected owner</span>}</td>
+                  {actor.role === "owner" ? <td>{user.role === "owner" ? <span className="text-xs font-bold text-[var(--rcg-muted)]">Protected owner</span> : <details className="min-w-60"><summary className="cursor-pointer text-sm font-bold text-red-700">Permanently delete…</summary><p className="mt-2 text-xs text-[var(--rcg-muted)]">This removes the account and its attendance records. Archive instead unless permanent deletion is required.</p><form action={deleteUser} className="mt-2 space-y-2"><input type="hidden" name="profileId" value={user.id} /><input className="input !min-h-9 !py-1" name="confirmEmail" type="email" placeholder={`Type ${user.email}`} required /><button className="btn btn-danger !min-h-9 !px-3" type="submit">Delete permanently</button></form></details>}</td> : null}
                 </tr>
               ))}
             </tbody>
