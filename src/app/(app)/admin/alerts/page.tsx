@@ -33,7 +33,7 @@ export default async function AdminAlertsPage() {
           <p className="text-sm font-bold uppercase tracking-[.12em] text-[var(--rcg-orange)]">Site safety</p>
           <h1 className="mt-1 text-3xl font-black">After-hours alerts</h1>
           <p className="mt-2 max-w-2xl text-[var(--rcg-muted)]">
-            Email selected people when someone remains clocked in after the normal closing time and grace period.
+            Manage the site name and email selected people when someone remains clocked in after the normal closing time and grace period.
           </p>
         </div>
         <Link className="btn btn-secondary" href="/admin">Back to admin</Link>
@@ -42,7 +42,7 @@ export default async function AdminAlertsPage() {
       <section className="card p-5 sm:p-6">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl font-black">Alert rules</h2>
+            <h2 className="text-xl font-black">Operational settings</h2>
             <p className="mt-1 text-sm text-[var(--rcg-muted)]">
               Status: <strong>{settings?.alert_enabled ? "Enabled" : "Disabled"}</strong>
               {settings?.last_alert_sent_at ? ` · Last sent ${formatUkDateTime(settings.last_alert_sent_at)}` : " · No alert sent yet"}
@@ -51,6 +51,10 @@ export default async function AdminAlertsPage() {
         </div>
 
         <form action={updateAlertSettings} className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-sm font-bold" htmlFor="siteName">Site name</label>
+            <input className="input" id="siteName" name="siteName" maxLength={120} defaultValue={settings?.site_name ?? "Redcatch Community Garden"} required />
+          </div>
           <div>
             <label className="mb-1 block text-sm font-bold" htmlFor="timezone">Timezone</label>
             <input className="input" id="timezone" name="timezone" defaultValue={settings?.timezone ?? "Europe/London"} required />
@@ -72,7 +76,7 @@ export default async function AdminAlertsPage() {
             <span><strong>Enable after-hours safety alerts</strong><span className="mt-1 block text-sm text-[var(--rcg-muted)]">Only enable this after recipients and email delivery have been tested.</span></span>
           </label>
           <div className="sm:col-span-2">
-            <button className="btn btn-primary" type="submit">Save alert rules</button>
+            <button className="btn btn-primary" type="submit">Save operational settings</button>
           </div>
         </form>
       </section>
