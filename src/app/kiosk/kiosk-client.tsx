@@ -48,11 +48,11 @@ export function KioskClient() {
 
   if (result?.success) {
     return (
-      <div className="text-center">
-        <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 text-4xl">✓</div>
+      <div className="rounded-2xl bg-[var(--rcg-green-soft)] p-7 text-center">
+        <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-[var(--rcg-green)] text-4xl font-black text-white">✓</div>
         <h2 className="text-3xl font-black">{result.full_name}</h2>
-        <p className="mt-2 text-xl font-bold text-[var(--rcg-green)]">
-          {result.action === "clock_in" ? "Clocked in" : "Clocked out"}
+        <p className="mt-2 text-xl font-extrabold text-[var(--rcg-green-dark)]">
+          {result.action === "clock_in" ? "You’re on site!" : "You’ve clocked out"}
         </p>
         <p className="mt-4 text-sm text-[var(--rcg-muted)]">This screen will reset automatically.</p>
       </div>
@@ -62,7 +62,7 @@ export function KioskClient() {
   return (
     <form className="space-y-5" onSubmit={submit}>
       <div>
-        <label className="mb-1 block text-sm font-bold" htmlFor="identifier">Email or short code</label>
+        <label className="mb-1 block text-sm font-extrabold" htmlFor="identifier">Email or short code</label>
         <input
           className="input text-lg"
           id="identifier"
@@ -73,7 +73,7 @@ export function KioskClient() {
         />
       </div>
       <div>
-        <label className="mb-1 block text-sm font-bold" htmlFor="pin">PIN</label>
+        <label className="mb-1 block text-sm font-extrabold" htmlFor="pin">PIN</label>
         <input
           className="input text-center text-2xl tracking-[.45em]"
           id="pin"
@@ -92,7 +92,7 @@ export function KioskClient() {
         <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{result.error}</p>
       ) : null}
 
-      <button className="btn-primary w-full text-lg" type="submit" disabled={busy}>
+      <button className="btn btn-primary w-full text-lg" type="submit" disabled={busy}>
         {busy ? "Checking…" : "Continue"}
       </button>
     </form>
