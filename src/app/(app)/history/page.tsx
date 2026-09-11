@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { requireProfile } from "@/lib/auth";
 import { durationHours, formatUkDateTime } from "@/lib/dates";
 import { HistoryExport } from "./history-client";
@@ -17,8 +18,13 @@ export default async function HistoryPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const today = new Date();
   const monthStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
-  const from = /^\d{4}-\d{2}-\d{2}$/.test(params.from ?? "") ? params.from! : dateValue(monthStart);
-  const to = /^\d{4}-\d{2}-\d{2}$/.test(params.to ?? "") ? params.to! : dateValue(today);
+  const mondayOffset = (today.getUTCDay() + 6) % 7;
+  const weekStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() - mondayOffset));
+  const todayValue = dateValue(today);
+  const monthStartValue = dateValue(monthStart);
+  const weekStartValue = dateValue(weekStart);
+  const from = /^\d{4}-\d{2}-\d{2}$/.test(params.from ?? "") ? params.from! : monthStartValue;
+  const to = /^\d{4}-\d{2}-\d{2}$/.test(params.to ?? "") ? params.to! : todayValue;
 
   const { supabase, profile } = await requireProfile();
   const { data } = await supabase
@@ -50,6 +56,10 @@ export default async function HistoryPage({ searchParams }: PageProps) {
       </div>
 
       <section className="card p-5 sm:p-6">
+        <div className="mb-4 flex flex-wrap gap-2">
+          <Link className="btn btn-secondary !min-h-9 !px-3" href={`/history?from=${weekStartValue}&to=${todayValue}`}>This week</Link>
+          <Link className="btn btn-secondary !min-h-9 !px-3" href={`/history?from=${monthStartValue}&to=${todayValue}`}>This month</Link>
+        </div>
         <form className="grid gap-4 sm:grid-cols-3" method="get">
           <div><label className="mb-1 block text-sm font-bold" htmlFor="from">From</label><input className="input" id="from" name="from" type="date" defaultValue={from} required /></div>
           <div><label className="mb-1 block text-sm font-bold" htmlFor="to">To</label><input className="input" id="to" name="to" type="date" defaultValue={to} required /></div>
