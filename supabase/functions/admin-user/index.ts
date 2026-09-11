@@ -121,6 +121,30 @@ Deno.serve(async (req) => {
     .maybeSingle();
   if (!target) return reply({ error: "User not found." }, 404);
 
+  if (action === "delete_user") {
+    if (actor.role !== "owner") return reply({ error: "Only the owner can permanently delete users." }, 403);
+    if (target.role === "owner") return reply({ error: "The owner account cannot be deleted." }, 400);
+
+    const confirmation = String(body.confirm_email ?? "").trim().toLowerCase();
+    if (confirmation !== String(target.email).toLowerCase()) {
+      return reply({ error: "Type the user's email address exactly to confirm permanent deletion." }, 400);
+    }
+
+    const deleted = {
+      profile_id: target.id,
+      user_id: target.user_id,
+      full_name: target.full_name,
+      email: target.email,
+      role: target.role,
+    };
+
+    const { error: deleteError } = await admin.auth.admin.deleteUser(target.user_id);
+    if (deleteError) return reply({ error: "Unable to permanently delete this user." }, 400);
+
+    await audit("user_deleted", null, deleted);
+    return reply({ success: true });
+  }
+
   if (action === "set_active") {
     const active = body.active === true;
     if (target.role === "owner" && !active) return reply({ error: "The owner account cannot be archived." }, 400);
