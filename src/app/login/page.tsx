@@ -14,14 +14,12 @@ export default async function LoginPage({
   return (
     <main className="shell flex min-h-screen items-center justify-center py-10">
       <section className="card w-full max-w-md p-7 sm:p-9">
-        <div className="mb-7">
-          <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[#d7652f] text-2xl font-black text-white">
-            RCG
-          </div>
-          <h1 className="text-3xl font-bold">Clocking App</h1>
-          <p className="mt-2 text-[var(--rcg-muted)]">
-            Sign in to record your time at Redcatch Community Garden.
-          </p>
+        <div className="mb-8 text-center">
+          <img className="mx-auto h-28 w-32 object-contain" src="/icon.svg" alt="Redcatch fox wearing a green staff shirt" />
+          <div className="brand-name mt-2 text-2xl">Redcatch<br />Community Garden</div>
+          <p className="mt-2 text-sm font-extrabold uppercase tracking-[.12em] text-[var(--rcg-green)]">Clocking app</p>
+          <h1 className="mt-7 text-3xl font-black tracking-tight">Welcome</h1>
+          <p className="mt-2 text-[var(--rcg-muted)]">Sign in to record your time and help keep everyone on site accounted for.</p>
         </div>
 
         {error ? (
@@ -33,20 +31,20 @@ export default async function LoginPage({
 
         <form action={login} className="space-y-4">
           <div>
-            <label htmlFor="email" className="mb-1 block text-sm font-bold">Email</label>
+            <label htmlFor="email" className="mb-1 block text-sm font-extrabold">Email address</label>
             <input className="input" id="email" name="email" type="email" autoComplete="email" required />
           </div>
           <div>
             <div className="mb-1 flex items-center justify-between gap-3">
-              <label htmlFor="password" className="block text-sm font-bold">Password</label>
-              <Link className="text-sm font-bold text-[var(--rcg-green)]" href="/forgot-password">Forgot password?</Link>
+              <label htmlFor="password" className="block text-sm font-extrabold">Password</label>
+              <Link className="text-sm font-extrabold text-[var(--rcg-green)]" href="/forgot-password">Forgot password?</Link>
             </div>
             <input className="input" id="password" name="password" type="password" autoComplete="current-password" required />
           </div>
-          <button className="btn btn-primary w-full" type="submit">Sign in</button>
+          <button className="btn btn-primary w-full text-base" type="submit">Sign in</button>
         </form>
 
-        <Link className="mt-5 block text-center text-sm font-bold text-[var(--rcg-green)]" href="/kiosk">
+        <Link className="mt-5 block text-center text-sm font-extrabold text-[var(--rcg-green)]" href="/kiosk">
           Use the on-site kiosk
         </Link>
       </section>
