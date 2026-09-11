@@ -45,3 +45,11 @@ export async function requireAdminProfile() {
   }
   return context;
 }
+
+export async function requireDeveloperProfile() {
+  const context = await requireProfile();
+  if (!["owner", "developer"].includes(context.profile.role)) {
+    redirect("/dashboard");
+  }
+  return context;
+}

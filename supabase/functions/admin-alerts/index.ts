@@ -93,18 +93,21 @@ Deno.serve(async (req) => {
   if (!settings) return reply({ error: "Application settings are missing." }, 500);
 
   if (action === "update_settings") {
+    const siteName = String(body.site_name ?? "").trim();
     const timezone = String(body.timezone ?? "").trim();
     const closingTime = String(body.closing_time ?? "").trim();
     const grace = Number(body.alert_grace_minutes);
     const repeat = Number(body.alert_repeat_minutes);
     const enabled = body.alert_enabled === true;
 
+    if (!siteName || siteName.length > 120) return reply({ error: "Site name is required and must be 120 characters or fewer." }, 400);
     if (!validTimezone(timezone)) return reply({ error: "Enter a valid timezone." }, 400);
     if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(closingTime)) return reply({ error: "Closing time must use HH:MM." }, 400);
     if (!Number.isInteger(grace) || grace < 0 || grace > 240) return reply({ error: "Grace period must be 0–240 minutes." }, 400);
     if (!Number.isInteger(repeat) || repeat < 15 || repeat > 1440) return reply({ error: "Repeat interval must be 15–1440 minutes." }, 400);
 
     const next = {
+      site_name: siteName,
       timezone,
       closing_time: closingTime,
       alert_enabled: enabled,
@@ -113,8 +116,9 @@ Deno.serve(async (req) => {
     };
 
     const { error } = await admin.from("settings").update(next).eq("id", settings.id);
-    if (error) return reply({ error: "Unable to update alert settings." }, 400);
-    await audit("alert_settings_changed", { old: {
+    if (error) return reply({ error: "Unable to update operational settings." }, 400);
+    await audit("operational_settings_changed", { old: {
+      site_name: settings.site_name,
       timezone: settings.timezone,
       closing_time: settings.closing_time,
       alert_enabled: settings.alert_enabled,

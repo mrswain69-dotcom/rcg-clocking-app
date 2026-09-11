@@ -1,18 +1,40 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { requireProfile } from "@/lib/auth";
 import { durationHours, formatUkDateTime } from "@/lib/dates";
 import { HistoryExport } from "./history-client";
 
 export const metadata: Metadata = { title: "Attendance history" };
 
-export default async function HistoryPage() {
+type PageProps = {
+  searchParams: Promise<{ from?: string; to?: string }>;
+};
+
+function dateValue(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+export default async function HistoryPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const today = new Date();
+  const monthStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
+  const mondayOffset = (today.getUTCDay() + 6) % 7;
+  const weekStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() - mondayOffset));
+  const todayValue = dateValue(today);
+  const monthStartValue = dateValue(monthStart);
+  const weekStartValue = dateValue(weekStart);
+  const from = /^\d{4}-\d{2}-\d{2}$/.test(params.from ?? "") ? params.from! : monthStartValue;
+  const to = /^\d{4}-\d{2}-\d{2}$/.test(params.to ?? "") ? params.to! : todayValue;
+
   const { supabase, profile } = await requireProfile();
   const { data } = await supabase
     .from("sessions")
     .select("id,clock_in_at,clock_out_at,clock_in_method,clock_out_method")
     .eq("profile_id", profile.id)
+    .gte("clock_in_at", `${from}T00:00:00.000Z`)
+    .lte("clock_in_at", `${to}T23:59:59.999Z`)
     .order("clock_in_at", { ascending: false })
-    .limit(500);
+    .limit(1000);
   const sessions = data ?? [];
 
   const totalHours = sessions.reduce(
@@ -30,8 +52,20 @@ export default async function HistoryPage() {
             {sessions.length} visits · {totalHours.toFixed(2)} recorded hours
           </p>
         </div>
-        <HistoryExport sessions={sessions} />
+        <HistoryExport sessions={sessions} from={from} to={to} />
       </div>
+
+      <section className="card p-5 sm:p-6">
+        <div className="mb-4 flex flex-wrap gap-2">
+          <Link className="btn btn-secondary !min-h-9 !px-3" href={`/history?from=${weekStartValue}&to=${todayValue}`}>This week</Link>
+          <Link className="btn btn-secondary !min-h-9 !px-3" href={`/history?from=${monthStartValue}&to=${todayValue}`}>This month</Link>
+        </div>
+        <form className="grid gap-4 sm:grid-cols-3" method="get">
+          <div><label className="mb-1 block text-sm font-bold" htmlFor="from">From</label><input className="input" id="from" name="from" type="date" defaultValue={from} required /></div>
+          <div><label className="mb-1 block text-sm font-bold" htmlFor="to">To</label><input className="input" id="to" name="to" type="date" defaultValue={to} required /></div>
+          <div className="flex items-end"><button className="btn btn-primary w-full" type="submit">Apply dates</button></div>
+        </form>
+      </section>
 
       <section className="card p-5 sm:p-6">
         {sessions.length ? (
@@ -51,7 +85,7 @@ export default async function HistoryPage() {
             </table>
           </div>
         ) : (
-          <p className="text-[var(--rcg-muted)]">No attendance records yet.</p>
+          <p className="text-[var(--rcg-muted)]">No attendance records in this date range.</p>
         )}
       </section>
     </div>

@@ -11,11 +11,13 @@ async function invoke(body: Record<string, unknown>) {
   }
   revalidatePath("/admin/alerts");
   revalidatePath("/admin/audit");
+  revalidatePath("/developer");
 }
 
 export async function updateAlertSettings(formData: FormData) {
   await invoke({
     action: "update_settings",
+    site_name: String(formData.get("siteName") ?? "Redcatch Community Garden"),
     timezone: String(formData.get("timezone") ?? "Europe/London"),
     closing_time: String(formData.get("closingTime") ?? "18:00"),
     alert_enabled: formData.get("alertEnabled") === "on",

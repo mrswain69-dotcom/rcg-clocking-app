@@ -1,13 +1,16 @@
 import Link from "next/link";
+import { RealtimeRefresh } from "@/components/realtime-refresh";
 import { requireProfile } from "@/lib/auth";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { profile } = await requireProfile();
   const adminLike = ["owner", "admin", "developer"].includes(profile.role);
+  const developerLike = ["owner", "developer"].includes(profile.role);
   const canViewOnSite = adminLike || profile.can_view_currently_on_site;
 
   return (
     <div className="min-h-screen">
+      <RealtimeRefresh />
       <header className="border-b border-[var(--rcg-border)] bg-white/85 backdrop-blur">
         <div className="shell flex min-h-18 items-center justify-between gap-4 py-3">
           <Link href="/dashboard" className="font-black tracking-tight">
@@ -21,6 +24,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             {canViewOnSite ? <Link className="rounded-xl px-3 py-2 hover:bg-black/5" href="/on-site">On site</Link> : null}
             <Link className="rounded-xl px-3 py-2 hover:bg-black/5" href="/account">Account</Link>
             {adminLike ? <Link className="rounded-xl px-3 py-2 hover:bg-black/5" href="/admin">Admin</Link> : null}
+            {developerLike ? <Link className="rounded-xl px-3 py-2 hover:bg-black/5" href="/developer">Developer</Link> : null}
             <span className="badge hidden sm:inline-flex">{profile.role}</span>
             <form action="/auth/signout" method="post"><button className="btn btn-secondary !min-h-9 !px-3" type="submit">Sign out</button></form>
           </nav>
