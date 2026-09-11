@@ -11,21 +11,24 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen">
       <RealtimeRefresh />
-      <header className="border-b border-[var(--rcg-border)] bg-white/85 backdrop-blur">
-        <div className="shell flex min-h-18 items-center justify-between gap-4 py-3">
-          <Link href="/dashboard" className="font-black tracking-tight">
-            <span className="mr-2 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--rcg-orange)] text-sm text-white">RCG</span>
-            Clocking
+      <header className="border-b border-[var(--rcg-border)] bg-[#fffefb]/95 backdrop-blur">
+        <div className="shell flex min-h-20 flex-col justify-between gap-3 py-3 sm:flex-row sm:items-center">
+          <Link href="/dashboard" className="brand-lockup" aria-label="Redcatch Community Garden clocking dashboard">
+            <img className="brand-fox" src="/icon.svg" alt="Redcatch fox wearing a green staff shirt" />
+            <span>
+              <span className="brand-name block">Redcatch<br />Community Garden</span>
+              <span className="brand-subtitle block">Clocking app</span>
+            </span>
           </Link>
 
-          <nav className="flex flex-wrap items-center justify-end gap-2 text-sm font-bold">
-            <Link className="rounded-xl px-3 py-2 hover:bg-black/5" href="/dashboard">Dashboard</Link>
-            <Link className="rounded-xl px-3 py-2 hover:bg-black/5" href="/history">History</Link>
-            {canViewOnSite ? <Link className="rounded-xl px-3 py-2 hover:bg-black/5" href="/on-site">On site</Link> : null}
-            <Link className="rounded-xl px-3 py-2 hover:bg-black/5" href="/account">Account</Link>
-            {adminLike ? <Link className="rounded-xl px-3 py-2 hover:bg-black/5" href="/admin">Admin</Link> : null}
-            {developerLike ? <Link className="rounded-xl px-3 py-2 hover:bg-black/5" href="/developer">Developer</Link> : null}
-            <span className="badge hidden sm:inline-flex">{profile.role}</span>
+          <nav className="flex flex-wrap items-center gap-1 text-sm font-extrabold sm:justify-end">
+            <Link className="rounded-xl px-3 py-2 hover:bg-[var(--rcg-green-soft)] hover:text-[var(--rcg-green-dark)]" href="/dashboard">Dashboard</Link>
+            <Link className="rounded-xl px-3 py-2 hover:bg-[var(--rcg-green-soft)] hover:text-[var(--rcg-green-dark)]" href="/history">History</Link>
+            {canViewOnSite ? <Link className="rounded-xl px-3 py-2 hover:bg-[var(--rcg-green-soft)] hover:text-[var(--rcg-green-dark)]" href="/on-site">On site</Link> : null}
+            <Link className="rounded-xl px-3 py-2 hover:bg-[var(--rcg-green-soft)] hover:text-[var(--rcg-green-dark)]" href="/account">Account</Link>
+            {adminLike ? <Link className="rounded-xl px-3 py-2 hover:bg-[var(--rcg-green-soft)] hover:text-[var(--rcg-green-dark)]" href="/admin">Admin</Link> : null}
+            {developerLike ? <Link className="rounded-xl px-3 py-2 hover:bg-[var(--rcg-green-soft)] hover:text-[var(--rcg-green-dark)]" href="/developer">Developer</Link> : null}
+            <span className="badge hidden md:inline-flex">{profile.role}</span>
             <form action="/auth/signout" method="post"><button className="btn btn-secondary !min-h-9 !px-3" type="submit">Sign out</button></form>
           </nav>
         </div>
