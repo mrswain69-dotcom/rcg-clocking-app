@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { PageHeader } from "@/components/brand/PageHeader";
 import { requireProfile } from "@/lib/auth";
 import { OnSiteLive } from "../admin/on-site-live";
 
@@ -20,14 +21,11 @@ export default async function OnSitePage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <p className="text-sm font-bold uppercase tracking-[.12em] text-[var(--rcg-orange)]">Site safety</p>
-        <h1 className="mt-1 text-3xl font-black">Currently on site</h1>
-        <p className="mt-2 text-[var(--rcg-muted)]">
-          Live attendance for people currently recorded as at Redcatch Community Garden.
-        </p>
-      </div>
-
+      <PageHeader
+        eyebrow="Site safety"
+        title="Who's on site"
+        description="People currently recorded as being at Redcatch Community Garden. This list updates automatically as people clock in and out."
+      />
       <OnSiteLive initialRows={data ?? []} />
     </div>
   );
