@@ -36,7 +36,7 @@ export function PwaRegistration() {
     <button
       type="button"
       onClick={install}
-      className="fixed bottom-4 right-4 z-50 rounded-xl bg-[var(--rcg-green)] px-4 py-3 text-sm font-bold text-white shadow-lg"
+      className="pwa-install-prompt fixed z-50 rounded-xl bg-[var(--rcg-green)] px-4 py-3 text-sm font-bold text-white shadow-lg"
     >
       Install RCG Clocking
     </button>

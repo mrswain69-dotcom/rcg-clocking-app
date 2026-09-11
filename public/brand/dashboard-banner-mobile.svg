@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 220" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="garden" x1="0" x2="1"><stop stop-color="#275d2e"/><stop offset=".5" stop-color="#4c7d38"/><stop offset="1" stop-color="#224e2b"/></linearGradient>
+  </defs>
+  <rect width="760" height="220" rx="24" fill="url(#garden)"/>
+  <g opacity=".75" fill="#8fb66e"><circle cx="90" cy="185" r="94"/><circle cx="185" cy="194" r="78"/><circle cx="590" cy="190" r="92"/><circle cx="705" cy="205" r="78"/></g>
+  <g stroke="#cadf87" stroke-width="6" opacity=".86"><path d="M38 220 84 82M128 220 150 66M226 220 195 104M565 220 590 78M660 220 683 96"/></g>
+  <g>
+    <g transform="translate(94 78)"><g fill="#ffc21c"><ellipse rx="52" ry="13"/><ellipse rx="52" ry="13" transform="rotate(45)"/><ellipse rx="52" ry="13" transform="rotate(90)"/><ellipse rx="52" ry="13" transform="rotate(135)"/></g><circle r="27" fill="#6d3a10"/><circle r="16" fill="#2d1b0d"/></g>
+    <g transform="translate(655 60) scale(.62)"><g fill="#ffc21c"><ellipse rx="52" ry="13"/><ellipse rx="52" ry="13" transform="rotate(45)"/><ellipse rx="52" ry="13" transform="rotate(90)"/><ellipse rx="52" ry="13" transform="rotate(135)"/></g><circle r="27" fill="#6d3a10"/></g>
+  </g>
+  <g fill="#f294b8" opacity=".9"><circle cx="52" cy="142" r="9"/><circle cx="75" cy="158" r="7"/><circle cx="205" cy="151" r="8"/><circle cx="604" cy="132" r="8"/><circle cx="690" cy="148" r="7"/></g>
+  <g transform="translate(230 35) rotate(-1 150 74)">
+    <rect width="300" height="148" rx="6" fill="#c99a69"/>
+    <path d="M0 38h300M0 77h300M0 114h300" stroke="#9b6a45" stroke-width="3" opacity=".6"/>
+    <path d="M18 0v148M280 0v148" stroke="#e3bd8f" stroke-width="3" opacity=".45"/>
+    <text x="150" y="46" text-anchor="middle" font-family="Trebuchet MS, sans-serif" font-size="31" font-weight="700" fill="#243d2b">People</text>
+    <text x="150" y="86" text-anchor="middle" font-family="Trebuchet MS, sans-serif" font-size="31" font-weight="700" fill="#243d2b">Plants</text>
+    <text x="150" y="126" text-anchor="middle" font-family="Trebuchet MS, sans-serif" font-size="31" font-weight="700" fill="#243d2b">Community</text>
+  </g>
+</svg>

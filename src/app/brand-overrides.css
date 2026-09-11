@@ -57,6 +57,25 @@
   text-transform: uppercase;
 }
 
+.pwa-install-prompt {
+  right: 1rem;
+  bottom: 1rem;
+}
+
+@media (max-width: 767px) {
+  .dashboard-hero {
+    background-image: url('/brand/dashboard-banner-mobile.svg');
+    background-position: center;
+    background-size: cover;
+  }
+
+  .pwa-install-prompt {
+    right: .75rem;
+    bottom: calc(5.7rem + env(safe-area-inset-bottom));
+    max-width: calc(100vw - 1.5rem);
+  }
+}
+
 @media (max-width: 420px) {
   .mobile-more-menu { right: -.1rem; width: min(18rem, calc(100vw - .9rem)); }
 }
