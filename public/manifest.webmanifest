@@ -4,14 +4,9 @@
   "description": "Clock in and out at Redcatch Community Garden.",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#fbf6ed",
-  "theme_color": "#16853a",
+  "background_color": "#fbf8f1",
+  "theme_color": "#16883c",
   "icons": [
-    {
-      "src": "/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    }
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
   ]
 }

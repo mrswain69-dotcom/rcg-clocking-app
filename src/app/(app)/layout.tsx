@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 import { RealtimeRefresh } from "@/components/realtime-refresh";
 import { requireProfile } from "@/lib/auth";
 
@@ -9,31 +10,41 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const canViewOnSite = adminLike || profile.can_view_currently_on_site;
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen pb-20 md:pb-0">
       <RealtimeRefresh />
-      <header className="border-b border-[var(--rcg-border)] bg-[#fffefb]/95 backdrop-blur">
-        <div className="shell flex min-h-20 flex-col justify-between gap-3 py-3 sm:flex-row sm:items-center">
-          <Link href="/dashboard" className="brand-lockup" aria-label="Redcatch Community Garden clocking dashboard">
-            <img className="brand-fox" src="/icon.svg" alt="Redcatch fox wearing a green staff shirt" />
-            <span>
-              <span className="brand-name block">Redcatch<br />Community Garden</span>
-              <span className="brand-subtitle block">Clocking app</span>
-            </span>
-          </Link>
 
-          <nav className="flex flex-wrap items-center gap-1 text-sm font-extrabold sm:justify-end">
-            <Link className="rounded-xl px-3 py-2 hover:bg-[var(--rcg-green-soft)] hover:text-[var(--rcg-green-dark)]" href="/dashboard">Dashboard</Link>
-            <Link className="rounded-xl px-3 py-2 hover:bg-[var(--rcg-green-soft)] hover:text-[var(--rcg-green-dark)]" href="/history">History</Link>
-            {canViewOnSite ? <Link className="rounded-xl px-3 py-2 hover:bg-[var(--rcg-green-soft)] hover:text-[var(--rcg-green-dark)]" href="/on-site">On site</Link> : null}
-            <Link className="rounded-xl px-3 py-2 hover:bg-[var(--rcg-green-soft)] hover:text-[var(--rcg-green-dark)]" href="/account">Account</Link>
-            {adminLike ? <Link className="rounded-xl px-3 py-2 hover:bg-[var(--rcg-green-soft)] hover:text-[var(--rcg-green-dark)]" href="/admin">Admin</Link> : null}
-            {developerLike ? <Link className="rounded-xl px-3 py-2 hover:bg-[var(--rcg-green-soft)] hover:text-[var(--rcg-green-dark)]" href="/developer">Developer</Link> : null}
-            <span className="badge hidden md:inline-flex">{profile.role}</span>
-            <form action="/auth/signout" method="post"><button className="btn btn-secondary !min-h-9 !px-3" type="submit">Sign out</button></form>
+      <header className="app-header">
+        <div className="shell app-header-inner">
+          <BrandLogo compact />
+
+          <nav className="desktop-nav" aria-label="Main navigation">
+            <Link className="nav-link" href="/dashboard">Dashboard</Link>
+            <Link className="nav-link" href="/history">History</Link>
+            {canViewOnSite ? <Link className="nav-link" href="/on-site">On site</Link> : null}
+            <Link className="nav-link" href="/account">Account</Link>
+            {adminLike ? <Link className="nav-link" href="/admin">Admin</Link> : null}
+            {developerLike ? <Link className="nav-link" href="/developer">Developer</Link> : null}
+            <span className="role-pill">{profile.role}</span>
+            <form action="/auth/signout" method="post">
+              <button className="btn btn-secondary !min-h-10 !px-4" type="submit">Sign out</button>
+            </form>
           </nav>
         </div>
       </header>
-      <main className="shell py-7 sm:py-10">{children}</main>
+
+      <main className="shell app-main">{children}</main>
+
+      <nav className={`mobile-nav ${adminLike ? "mobile-nav-admin" : ""}`} aria-label="Mobile navigation">
+        <Link href="/dashboard"><span className="mobile-nav-icon">⌂</span><span>Home</span></Link>
+        <Link href="/history"><span className="mobile-nav-icon">▤</span><span>History</span></Link>
+        {canViewOnSite ? (
+          <Link href="/on-site"><span className="mobile-nav-icon">⌖</span><span>On Site</span></Link>
+        ) : (
+          <Link href="/account"><span className="mobile-nav-icon">◎</span><span>Account</span></Link>
+        )}
+        {canViewOnSite ? <Link href="/account"><span className="mobile-nav-icon">◎</span><span>Account</span></Link> : null}
+        {adminLike ? <Link href="/admin"><span className="mobile-nav-icon">⚙</span><span>Admin</span></Link> : null}
+      </nav>
     </div>
   );
 }

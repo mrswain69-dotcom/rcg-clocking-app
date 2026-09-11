@@ -1,22 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
-  <title id="title">Redcatch Community Garden staff fox</title>
-  <desc id="desc">An orange fox mascot wearing a green staff shirt.</desc>
-  <rect width="512" height="512" rx="92" fill="#fffdf8"/>
-  <g stroke="#222222" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M171 131 145 70l72 31c24-10 52-10 78 0l72-31-22 68c20 22 31 50 31 81 0 70-54 119-120 119s-120-49-120-119c0-34 13-64 35-88Z" fill="#ff5a17"/>
-    <path d="M154 152c15-25 36-43 63-51l-31-14-32 65Zm204 0c-14-25-35-43-63-51l31-14 32 65Z" fill="#fffdf8"/>
-    <circle cx="210" cy="203" r="8" fill="#222222" stroke="none"/>
-    <circle cx="302" cy="203" r="8" fill="#222222" stroke="none"/>
-    <path d="M239 235c10 8 24 8 34 0" fill="none"/>
-    <ellipse cx="256" cy="228" rx="16" ry="12" fill="#222222" stroke="none"/>
-    <path d="M176 290c24-21 136-21 160 0l-8 135c-47 26-97 26-144 0l-8-135Z" fill="#26943f"/>
-    <path d="M177 304c-24 8-38 25-43 53 17 4 35 2 50-8m151-45c24 8 38 25 43 53-17 4-35 2-50-8" fill="#ff5a17"/>
-    <path d="M207 421 194 458m111-37 13 37" fill="none"/>
-    <path d="M335 301c49-2 71-28 76-73 8-68 57-95 82-67 17 19 7 51-15 74 28 40 2 112-51 123-33 7-65-5-92-26" fill="#ff5a17"/>
-    <path d="M463 238c25-25 42-60 27-80-18-24-58-4-72 32 15 2 30 18 45 48Z" fill="#fffdf8"/>
-  </g>
-  <g fill="#ffffff" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">
-    <text x="256" y="345" font-size="28" font-weight="800">RCG</text>
-    <text x="256" y="371" font-size="14" font-weight="700">STAFF</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 340">
+  <rect width="340" height="340" rx="72" fill="#fbf8f1"/>
+  <g transform="translate(8 25)">
+    <g stroke="#20211f" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M206 91c21-45 64-56 91-44 22 10 26 37 20 62-7 29-28 45-31 69-4 29 7 47 1 64-9 27-53 28-103 17" fill="#ff5918"/>
+      <path d="M258 55c20-13 43-13 55-5 7 5 7 13 1 21l-14 20-9-11-8 13-10-11-8 12-9-13-8 10-5-14z" fill="#fff"/>
+      <path d="M54 102 68 49l20 20c22-10 63-11 91 0l20-20 9 53c8 19 10 44 8 71l-4 57-18 18-9 31-17-11H91l-15 13-7-35-17-19-6-61c-2-25 1-46 8-64Z" fill="#ff5918"/>
+      <path d="M56 151c14 7 30 11 50 13 34 3 70-2 100-14l9 28-7 61-22 9-7 22-14-9H92l-13 10-8-25-17-18-4-52z" fill="#2f9148"/>
+      <path d="M73 151c17 15 40 22 66 22 25 0 47-7 64-22" fill="none"/>
+      <circle cx="102" cy="104" r="4" fill="#20211f" stroke="none"/><circle cx="170" cy="104" r="4" fill="#20211f" stroke="none"/>
+      <path d="M85 124c18 22 33 26 51 26s34-5 51-26" fill="none"/><ellipse cx="136" cy="149" rx="13" ry="9" fill="#20211f"/>
+      <path d="M48 130 18 124M49 139 18 141M205 130l29-6M204 139l31 2" fill="none"/>
+      <g stroke="#fff" stroke-width="4" fill="none"><path d="M136 205v-25M136 184c-11-2-17-7-18-16 11-1 18 5 18 16ZM137 178c10-9 20-9 27-3-5 10-14 13-27 3Z"/><path d="M119 210c10 7 25 8 36 0"/></g>
+    </g>
   </g>
 </svg>
