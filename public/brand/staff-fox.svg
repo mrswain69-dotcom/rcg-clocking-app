@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 300" role="img" aria-label="Redcatch fox wearing a green staff shirt">
+  <g stroke="#20211f" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M206 91c21-45 64-56 91-44 22 10 26 37 20 62-7 29-28 45-31 69-4 29 7 47 1 64-9 27-53 28-103 17" fill="#ff5918"/>
+    <path d="M258 55c20-13 43-13 55-5 7 5 7 13 1 21l-14 20-9-11-8 13-10-11-8 12-9-13-8 10-5-14z" fill="#fff"/>
+    <path d="M54 102 68 49l20 20c22-10 63-11 91 0l20-20 9 53c8 19 10 44 8 71l-4 57-18 18-9 31-17-11H91l-15 13-7-35-17-19-6-61c-2-25 1-46 8-64Z" fill="#ff5918"/>
+    <path d="M52 163c-12 9-18 27-12 40 3 7 10 5 15-1" fill="#ff5918"/>
+    <path d="M205 163c12 10 17 26 12 39-3 8-10 6-15 0" fill="#ff5918"/>
+    <path d="M56 151c14 7 30 11 50 13 34 3 70-2 100-14l9 28-7 61-22 9-7 22-14-9H92l-13 10-8-25-17-18-4-52z" fill="#2f9148"/>
+    <path d="M73 151c17 15 40 22 66 22 25 0 47-7 64-22" fill="none"/>
+    <circle cx="102" cy="104" r="4" fill="#20211f" stroke="none"/><circle cx="170" cy="104" r="4" fill="#20211f" stroke="none"/>
+    <path d="M85 124c18 22 33 26 51 26s34-5 51-26" fill="none"/><ellipse cx="136" cy="149" rx="13" ry="9" fill="#20211f"/>
+    <path d="M48 130 18 124M49 139 18 141M205 130l29-6M204 139l31 2" fill="none"/>
+    <g stroke="#fff" stroke-width="4" fill="none"><path d="M136 205v-25M136 184c-11-2-17-7-18-16 11-1 18 5 18 16ZM137 178c10-9 20-9 27-3-5 10-14 13-27 3Z"/><path d="M119 210c10 7 25 8 36 0"/></g>
+  </g>
+</svg>
