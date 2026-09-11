@@ -1,9 +1,12 @@
-const CACHE_NAME = "rcg-clock-shell-v2";
+const CACHE_NAME = "rcg-clock-shell-v3";
 const OFFLINE_ASSETS = [
   "/offline",
   "/manifest.webmanifest",
-  "/icon.svg",
-  "/brand/staff-fox.svg",
+  "/favicon.ico",
+  "/icon-192.png",
+  "/icon-512.png",
+  "/apple-touch-icon.png",
+  "/brand/staff-fox.png",
   "/brand/leaves.svg"
 ];
 
