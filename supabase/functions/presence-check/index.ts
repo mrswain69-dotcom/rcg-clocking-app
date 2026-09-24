@@ -66,6 +66,30 @@ async function sendEmail(
   return response.ok;
 }
 
+async function ensureVapidKeys(
+  admin: ReturnType<typeof createClient>,
+  configuredPublicKey: string | null | undefined,
+) {
+  let publicKey = String(configuredPublicKey ?? "");
+  const { data: storedPrivateKey } = await admin.rpc("get_web_push_private_key");
+  let privateKey = storedPrivateKey ? String(storedPrivateKey) : "";
+
+  if (!publicKey || !privateKey) {
+    const generated = webpush.generateVAPIDKeys();
+    const { error } = await admin.rpc("configure_web_push_keys", {
+      p_public_key: generated.publicKey,
+      p_private_key: generated.privateKey,
+    });
+
+    if (!error) {
+      publicKey = generated.publicKey;
+      privateKey = generated.privateKey;
+    }
+  }
+
+  return { publicKey, privateKey };
+}
+
 Deno.serve(async (req) => {
   if (req.method !== "POST") return reply({ error: "Method not allowed." }, 405);
 
@@ -182,11 +206,10 @@ Deno.serve(async (req) => {
   const checkUrl = `${appBaseUrl}/dashboard?presenceCheck=${encodeURIComponent(requestId)}`;
 
   let pushSent = 0;
-  const { data: privateKey } = await admin.rpc("get_web_push_private_key");
-  const publicKey = String(settings?.vapid_public_key ?? "");
+  const { publicKey, privateKey } = await ensureVapidKeys(admin, settings?.vapid_public_key);
 
   if (publicKey && privateKey) {
-    webpush.setVapidDetails("mailto:alerts@rcgclocking.app", publicKey, String(privateKey));
+    webpush.setVapidDetails("mailto:alerts@rcgclocking.app", publicKey, privateKey);
 
     const { data: subscriptionsData } = await admin
       .from("push_subscriptions")
