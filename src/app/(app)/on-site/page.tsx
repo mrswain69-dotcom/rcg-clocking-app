@@ -26,7 +26,7 @@ export default async function OnSitePage() {
         title="Who's on site"
         description="People currently recorded as being at Redcatch Community Garden. This list updates automatically as people clock in and out."
       />
-      <OnSiteLive initialRows={data ?? []} />
+      <OnSiteLive initialRows={data ?? []} canRequestPresenceCheck={adminLike} />
     </div>
   );
 }
