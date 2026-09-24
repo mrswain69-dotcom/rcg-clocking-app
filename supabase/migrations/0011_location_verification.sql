@@ -403,9 +403,9 @@ grant execute on function public.record_presence_check(uuid,double precision,dou
 -- migration can revoke direct INSERT once the new RPC path is established in production.
 
 drop view if exists public.current_on_site_view;
-drop function if exists public.authorized_current_on_site_rows();
+drop function if exists private.authorized_current_on_site_rows();
 
-create function public.authorized_current_on_site_rows()
+create function private.authorized_current_on_site_rows()
 returns table (
   session_id uuid,
   profile_id uuid,
@@ -452,20 +452,20 @@ as $$
     end
   from public.sessions s
   join public.profiles p on p.id = s.profile_id
-  where public.can_view_on_site()
+  where private.can_view_on_site()
     and s.clock_out_at is null
     and p.is_active = true
     and p.archived_at is null
   order by s.clock_in_at asc
 $$;
 
-revoke all on function public.authorized_current_on_site_rows() from public;
-grant execute on function public.authorized_current_on_site_rows() to authenticated;
+revoke all on function private.authorized_current_on_site_rows() from public;
+grant execute on function private.authorized_current_on_site_rows() to authenticated;
 
 create view public.current_on_site_view
 with (security_invoker = true)
 as
-select * from public.authorized_current_on_site_rows();
+select * from private.authorized_current_on_site_rows();
 
 revoke all on public.current_on_site_view from anon;
 grant select on public.current_on_site_view to authenticated;
