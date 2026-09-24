@@ -4,7 +4,7 @@ import { DecorativePanel } from "@/components/brand/DecorativePanel";
 import { MetricCard } from "@/components/brand/MetricCard";
 import { requireProfile } from "@/lib/auth";
 import { durationHours, formatHoursMinutes, formatUkTime } from "@/lib/dates";
-import { clockIn, clockOut } from "./actions";
+import { ClockControls } from "./clock-controls";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -34,7 +34,7 @@ export default async function DashboardPage() {
   const [{ data: openSession }, { data: sessionsData }] = await Promise.all([
     supabase
       .from("sessions")
-      .select("id,clock_in_at")
+      .select("id,clock_in_at,clock_in_location_status,first_on_site_verified_at")
       .eq("profile_id", profile.id)
       .is("clock_out_at", null)
       .maybeSingle(),
@@ -101,20 +101,12 @@ export default async function DashboardPage() {
             </p>
           </div>
 
-          <div className="clock-actions">
-            <form action={clockIn}>
-              <button className="clock-btn clock-in" type="submit" disabled={isIn}>
-                <span>→ Clock In</span>
-                <small>I&apos;m on site now</small>
-              </button>
-            </form>
-            <form action={clockOut}>
-              <button className="clock-btn clock-out" type="submit" disabled={!isIn}>
-                <span>↪ Clock Out</span>
-                <small>I&apos;m leaving site</small>
-              </button>
-            </form>
-          </div>
+          <ClockControls
+            isIn={isIn}
+            openSessionId={openSession?.id}
+            clockInLocationStatus={openSession?.clock_in_location_status}
+            firstOnSiteVerifiedAt={openSession?.first_on_site_verified_at}
+          />
         </div>
       </section>
 

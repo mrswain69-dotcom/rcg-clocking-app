@@ -133,6 +133,12 @@ Deno.serve(async (req) => {
       profile_id: profile.id,
       clock_in_at: now,
       clock_in_method: "kiosk",
+      clock_in_location_status: "kiosk_verified",
+      clock_in_distance_m: 0,
+      first_on_site_verified_at: now,
+      first_on_site_verification_method: "kiosk",
+      last_presence_check_at: now,
+      last_presence_distance_m: 0,
     });
     if (error) return json({ error: "Could not clock in." }, 500);
   }
@@ -141,7 +147,7 @@ Deno.serve(async (req) => {
     entered_identifier: identifier,
     resolved_profile_id: profile.id,
     event_type: action,
-    metadata: { source: "kiosk-clock" },
+    metadata: { source: "kiosk-clock", on_site_verified: action === "clock_in" },
   });
 
   return json({ success: true, action, full_name: profile.full_name, at: now });
