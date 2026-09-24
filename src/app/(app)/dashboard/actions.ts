@@ -24,6 +24,21 @@ export type PresenceCheckResult = {
   verifiedAt: string | null;
 };
 
+type ClockInRpcRow = {
+  session_id: string;
+  location_status: string;
+  distance_outside_m: number | null;
+  reported_accuracy_m: number | null;
+  first_on_site_verified_at: string | null;
+};
+
+type PresenceCheckRpcRow = {
+  location_status: string;
+  distance_outside_m: number | null;
+  reported_accuracy_m: number | null;
+  verified_at: string | null;
+};
+
 function refreshAttendanceViews() {
   revalidatePath("/dashboard");
   revalidatePath("/history");
@@ -50,14 +65,15 @@ export async function clockIn(location?: BrowserLocation | null): Promise<ClockI
     throw new Error("Unable to clock in.");
   }
 
+  const row = data as ClockInRpcRow;
   refreshAttendanceViews();
 
   return {
-    sessionId: data.session_id,
-    locationStatus: data.location_status,
-    distanceOutsideM: data.distance_outside_m,
-    reportedAccuracyM: data.reported_accuracy_m,
-    firstOnSiteVerifiedAt: data.first_on_site_verified_at,
+    sessionId: row.session_id,
+    locationStatus: row.location_status,
+    distanceOutsideM: row.distance_outside_m,
+    reportedAccuracyM: row.reported_accuracy_m,
+    firstOnSiteVerifiedAt: row.first_on_site_verified_at,
   };
 }
 
@@ -78,13 +94,14 @@ export async function verifyOnSite(
     throw new Error("Unable to verify site presence.");
   }
 
+  const row = data as PresenceCheckRpcRow;
   refreshAttendanceViews();
 
   return {
-    locationStatus: data.location_status,
-    distanceOutsideM: data.distance_outside_m,
-    reportedAccuracyM: data.reported_accuracy_m,
-    verifiedAt: data.verified_at,
+    locationStatus: row.location_status,
+    distanceOutsideM: row.distance_outside_m,
+    reportedAccuracyM: row.reported_accuracy_m,
+    verifiedAt: row.verified_at,
   };
 }
 
