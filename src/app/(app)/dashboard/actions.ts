@@ -138,7 +138,7 @@ export async function disablePushSubscription(endpoint: string) {
 
 export async function respondPresenceCheckLocation(
   requestId: string,
-  location: BrowserLocation,
+  location: BrowserLocation | null,
 ): Promise<{ status: string }> {
   const { supabase } = await requireProfile();
 
