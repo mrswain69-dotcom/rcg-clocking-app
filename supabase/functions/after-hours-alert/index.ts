@@ -253,12 +253,13 @@ Deno.serve(async (req) => {
   ).limit(1).maybeSingle();
   const settings = settingsData as Settings | null;
   if (settingsError || !settings) return reply({ error: "Application settings are missing." }, 500);
-  if (!settings.alert_enabled) return reply({ success: true, skipped: "disabled" });
 
   if (settings.presence_check_enabled) {
     const vapid = await ensureVapidKeys(admin, settings.vapid_public_key);
     if (vapid.publicKey) settings.vapid_public_key = vapid.publicKey;
   }
+
+  if (!settings.alert_enabled) return reply({ success: true, skipped: "disabled" });
 
   const now = new Date();
   const nowIso = now.toISOString();
