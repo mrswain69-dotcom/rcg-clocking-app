@@ -10,10 +10,15 @@ export function RealtimeRefresh() {
   useEffect(() => {
     const supabase = createClient();
     const channel = supabase
-      .channel("authenticated-session-refresh")
+      .channel("authenticated-attendance-refresh")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "sessions" },
+        () => router.refresh(),
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "presence_check_requests" },
         () => router.refresh(),
       )
       .subscribe();

@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { DecorativePanel } from "@/components/brand/DecorativePanel";
 import { MetricCard } from "@/components/brand/MetricCard";
+import { PushNotificationSetup } from "@/components/push-notification-setup";
 import { requireProfile } from "@/lib/auth";
 import { durationHours, formatHoursMinutes, formatUkTime } from "@/lib/dates";
 import { ClockControls } from "./clock-controls";
+import { PresenceCheckPanel, type PresenceCheckRequest } from "./presence-check-panel";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -31,10 +33,10 @@ export default async function DashboardPage() {
   const { supabase, profile } = await requireProfile();
   const cutoff = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString();
 
-  const [{ data: openSession }, { data: sessionsData }] = await Promise.all([
+  const [{ data: openSession }, { data: sessionsData }, { data: pushPublicKeyData }] = await Promise.all([
     supabase
       .from("sessions")
-      .select("id,clock_in_at,clock_in_location_status,first_on_site_verified_at")
+      .select("id,clock_in_at,clock_in_location_status,first_on_site_verified_at,current_presence_status,current_presence_status_at,current_presence_source")
       .eq("profile_id", profile.id)
       .is("clock_out_at", null)
       .maybeSingle(),
@@ -45,10 +47,27 @@ export default async function DashboardPage() {
       .gte("clock_in_at", cutoff)
       .order("clock_in_at", { ascending: false })
       .limit(1000),
+    supabase.rpc("get_push_public_key"),
   ]);
+
+  let presenceRequest: PresenceCheckRequest | null = null;
+  if (openSession) {
+    const { data } = await supabase
+      .from("presence_check_requests")
+      .select("id,status,requested_at,request_source")
+      .eq("profile_id", profile.id)
+      .eq("session_id", openSession.id)
+      .in("status", ["pending", "outside_site", "location_unavailable"])
+      .order("requested_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    presenceRequest = data as PresenceCheckRequest | null;
+  }
 
   const sessions = sessionsData ?? [];
   const isIn = Boolean(openSession);
+  const currentPresence = openSession?.current_presence_status ?? "off_site";
   const firstName = profile.full_name.trim().split(/\s+/)[0] || profile.full_name;
   const todayKey = londonDateKey(new Date());
   const monthStart = `${todayKey.slice(0, 7)}-01`;
@@ -73,6 +92,22 @@ export default async function DashboardPage() {
     timeZone: "Europe/London",
   }).format(new Date());
 
+  const statusTitle = !openSession
+    ? "Off site"
+    : currentPresence === "on_site"
+      ? "On site"
+      : currentPresence === "off_site"
+        ? "Clocked in · Off site"
+        : "Clocked in · Presence unverified";
+
+  const statusCopy = !openSession
+    ? "Clock in when you arrive on site so the team knows you're here."
+    : currentPresence === "on_site"
+      ? `Clocked in at ${formatUkTime(openSession.clock_in_at)}. Remember to clock out when you leave.`
+      : currentPresence === "off_site"
+        ? `Clocked in at ${formatUkTime(openSession.clock_in_at)} and currently recorded as off site.`
+        : `Clocked in at ${formatUkTime(openSession.clock_in_at)}. Your current site presence has not been verified.`;
+
   return (
     <div className="space-y-6">
       <section className="dashboard-hero" aria-label="People, plants and community at Redcatch Community Garden" />
@@ -86,19 +121,19 @@ export default async function DashboardPage() {
         <p className="dashboard-date">{fullDate} ☀</p>
       </div>
 
+      {presenceRequest ? <PresenceCheckPanel request={presenceRequest} /> : null}
+
+      <PushNotificationSetup publicKey={typeof pushPublicKeyData === "string" ? pushPublicKeyData : null} />
+
       <section className="status-card">
         <div className="status-grid">
           <div>
             <p className="status-label">You are currently</p>
             <div className="status-row">
-              <span className={`status-dot ${isIn ? "active" : ""}`} />
-              <h2 className="status-title">{isIn ? "On site" : "Off site"}</h2>
+              <span className={`status-dot ${currentPresence === "on_site" ? "active" : ""}`} />
+              <h2 className="status-title">{statusTitle}</h2>
             </div>
-            <p className="status-copy">
-              {openSession
-                ? `Clocked in at ${formatUkTime(openSession.clock_in_at)}. Remember to clock out when you leave.`
-                : "Clock in when you arrive on site so the team knows you're here."}
-            </p>
+            <p className="status-copy">{statusCopy}</p>
           </div>
 
           <ClockControls

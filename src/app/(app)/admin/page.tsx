@@ -47,7 +47,7 @@ export default async function AdminPage() {
         </Link>
       ) : null}
 
-      <OnSiteLive initialRows={current} />
+      <OnSiteLive initialRows={current} canRequestPresenceCheck />
     </div>
   );
 }

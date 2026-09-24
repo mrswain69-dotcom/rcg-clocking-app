@@ -24,6 +24,10 @@ Use this checklist before broad staff/volunteer rollout. Run destructive tests w
 - A normal user without the capability cannot access the on-site view.
 - A user granted `can_view_currently_on_site` can access it.
 - Clock-in/out in a second browser updates the on-site list in realtime.
+- Mobile clock-in inside the site geofence is shown as verified on site.
+- Mobile clock-in clearly outside the geofence records distance/accuracy evidence without blocking the clock-in.
+- Kiosk clock-in is immediately marked as on-site verified.
+- Current presence can change to off site without ending the work session.
 
 ## Kiosk
 
@@ -66,12 +70,18 @@ Keep production alerts disabled until the first five checks pass.
 - `rcgclocking.app` is verified for sending in Resend.
 - At least one active recipient exists.
 - **Send test to active recipients** is received.
-- Site name, Europe/London timezone, closing time, grace and repeat interval are correct.
+- Site name, Europe/London timezone, closing time, grace, response window and repeat interval are correct.
+- On a supported personal device, **Enable safety notifications** creates a Web Push subscription.
 - Enable alerts.
-- With no qualifying open session, scheduler sends nothing.
-- With a controlled test user left open beyond a temporarily configured closing/grace threshold, an alert is received and contains site name, current time, user, clock-in time and duration.
-- A second alert is suppressed until the repeat interval.
-- Restore the real operational closing/grace settings after the test.
+- With no qualifying on-site/unverified open session, scheduler sends nothing.
+- With a controlled test user left recorded on site beyond a temporarily configured closing/grace threshold, the user receives a presence check before management is escalated.
+- Opening the check performs a fresh location check and reports only on-site/off-site/unresolved to management.
+- **I already left — clock me out** accepts the actual leave time and closes the session at that time.
+- **I've left RCG but I'm still working** marks the person off site without closing the work session.
+- If the user does not resolve the request within the configured response window, management receives the escalation email.
+- Admin **Request presence check** can issue/reissue a check manually.
+- A further unresolved management escalation is suppressed until the repeat interval.
+- Restore the real operational closing/grace/response settings after the test.
 
 ## PWA and resilience
 

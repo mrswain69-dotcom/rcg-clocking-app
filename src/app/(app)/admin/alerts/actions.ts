@@ -23,6 +23,8 @@ export async function updateAlertSettings(formData: FormData) {
     alert_enabled: formData.get("alertEnabled") === "on",
     alert_grace_minutes: Number(formData.get("graceMinutes") ?? 15),
     alert_repeat_minutes: Number(formData.get("repeatMinutes") ?? 60),
+    presence_check_enabled: formData.get("presenceCheckEnabled") === "on",
+    presence_check_escalation_minutes: Number(formData.get("presenceCheckEscalationMinutes") ?? 10),
   });
 }
 
