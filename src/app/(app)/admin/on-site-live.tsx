@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { requestPresenceCheck } from "./presence-actions";
 
 type OnSiteRow = {
   session_id: string;
@@ -16,9 +17,14 @@ type OnSiteRow = {
   first_on_site_verified_at: string | null;
   first_on_site_verification_method: string | null;
   last_presence_check_at: string | null;
-  last_presence_distance_m: number | null;
-  last_presence_accuracy_m: number | null;
+  current_presence_status: "on_site" | "off_site" | "unverified";
+  current_presence_status_at: string | null;
+  current_presence_source: string | null;
   presence_state: "verified_on_site" | "outside_site" | "unverified";
+  latest_presence_check_id: string | null;
+  latest_presence_check_status: string | null;
+  latest_presence_check_requested_at: string | null;
+  latest_presence_check_escalated_at: string | null;
 };
 
 function formatTime(value: string) {
@@ -38,60 +44,133 @@ function minutesBetween(start: string, end: string) {
   return Math.max(0, Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60000));
 }
 
-function verificationCopy(row: OnSiteRow) {
-  if (row.clock_in_location_status === "kiosk_verified") {
-    return { label: "Verified on site", detail: "Kiosk clock-in", tone: "ok" as const };
+function presenceCopy(row: OnSiteRow) {
+  if (row.current_presence_status === "on_site") {
+    if (row.current_presence_source === "user_confirmation") {
+      return {
+        label: "User confirmed on site",
+        detail: "User confirmation · GPS was not used for this confirmation",
+        tone: "neutral" as const,
+      };
+    }
+
+    if (row.current_presence_source === "kiosk" || row.clock_in_location_status === "kiosk_verified") {
+      return {
+        label: "Verified on site",
+        detail: "Kiosk verification",
+        tone: "ok" as const,
+      };
+    }
+
+    if (row.first_on_site_verified_at) {
+      const delay = minutesBetween(row.clock_in_at, row.first_on_site_verified_at);
+      const initialDistance = formatDistance(row.clock_in_distance_m);
+      return {
+        label: "Verified on site",
+        detail: initialDistance && row.clock_in_distance_m
+          ? `Clocked in ${initialDistance} outside site · first verified ${delay} min later`
+          : row.last_presence_check_at
+            ? `GPS presence confirmed at ${formatTime(row.last_presence_check_at)}`
+            : "GPS verified",
+        tone: "ok" as const,
+      };
+    }
+
+    return { label: "Recorded on site", detail: "Current site status is on site", tone: "ok" as const };
   }
 
-  if (row.first_on_site_verified_at) {
-    const delay = minutesBetween(row.clock_in_at, row.first_on_site_verified_at);
+  if (row.current_presence_status === "off_site") {
+    if (row.current_presence_source === "presence_check_gps") {
+      return {
+        label: "Presence check: off site",
+        detail: "The check confirmed the device is not at RCG. Exact location is not shared.",
+        tone: "warn" as const,
+      };
+    }
+
+    if (row.current_presence_source === "user_working_off_site") {
+      return {
+        label: "Working off site",
+        detail: "User confirmed they have left RCG but are still working.",
+        tone: "neutral" as const,
+      };
+    }
+
     const initialDistance = formatDistance(row.clock_in_distance_m);
     return {
-      label: "Verified on site",
-      detail: initialDistance
-        ? `Clocked in ${initialDistance} outside site · first verified ${delay} min later`
-        : `First verified on site ${delay} min after clock-in`,
-      tone: "ok" as const,
-    };
-  }
-
-  if (row.clock_in_location_status === "outside_site") {
-    const distance = formatDistance(row.clock_in_distance_m);
-    const accuracy = row.clock_in_accuracy_m === null ? null : `±${row.clock_in_accuracy_m} m accuracy`;
-    return {
-      label: "Clocked in outside site",
-      detail: [distance ? `${distance} from site boundary` : null, accuracy].filter(Boolean).join(" · "),
+      label: "Currently recorded off site",
+      detail: initialDistance && row.clock_in_location_status === "outside_site"
+        ? `Clock-in was ${initialDistance} outside the site boundary`
+        : "Open work session, but not currently counted as physically on site.",
       tone: "warn" as const,
     };
   }
 
   if (row.clock_in_location_status === "near_boundary") {
     return {
-      label: "Near site boundary",
-      detail: [
-        formatDistance(row.clock_in_distance_m),
-        row.clock_in_accuracy_m === null ? null : `±${row.clock_in_accuracy_m} m accuracy`,
-      ].filter(Boolean).join(" · "),
+      label: "Presence unverified",
+      detail: "Clock-in was close to the site boundary and GPS was inconclusive.",
       tone: "neutral" as const,
     };
   }
 
   if (row.clock_in_location_status === "location_uncertain") {
     return {
-      label: "Location uncertain",
-      detail: row.clock_in_accuracy_m === null ? "GPS accuracy unavailable" : `GPS accuracy ±${row.clock_in_accuracy_m} m`,
+      label: "Presence unverified",
+      detail: row.clock_in_accuracy_m === null ? "GPS accuracy unavailable" : `Clock-in GPS accuracy ±${row.clock_in_accuracy_m} m`,
       tone: "neutral" as const,
     };
   }
 
   return {
-    label: "Location unverified",
-    detail: "No reliable clock-in location was available",
+    label: "Presence unverified",
+    detail: "No reliable current site confirmation is available.",
     tone: "neutral" as const,
   };
 }
 
-export function OnSiteLive({ initialRows }: { initialRows: OnSiteRow[] }) {
+function checkCopy(row: OnSiteRow) {
+  const status = row.latest_presence_check_status;
+  if (!status || !row.latest_presence_check_requested_at) return null;
+
+  if (status === "pending") {
+    return {
+      label: "Presence check awaiting response",
+      detail: `Requested at ${formatTime(row.latest_presence_check_requested_at)}${row.latest_presence_check_escalated_at ? " · escalated to management" : ""}`,
+    };
+  }
+
+  if (status === "location_unavailable") {
+    return {
+      label: "Presence check unresolved",
+      detail: `Location could not be verified · requested at ${formatTime(row.latest_presence_check_requested_at)}`,
+    };
+  }
+
+  if (status === "outside_site") {
+    return {
+      label: "Latest check returned off site",
+      detail: "No exact location was shared.",
+    };
+  }
+
+  if (status === "user_confirmed_on_site") {
+    return {
+      label: "Latest check: user confirmed on site",
+      detail: "This was a user confirmation rather than GPS verification.",
+    };
+  }
+
+  return null;
+}
+
+export function OnSiteLive({
+  initialRows,
+  canRequestPresenceCheck = false,
+}: {
+  initialRows: OnSiteRow[];
+  canRequestPresenceCheck?: boolean;
+}) {
   const [rows, setRows] = useState(initialRows);
 
   useEffect(() => {
@@ -103,8 +182,9 @@ export function OnSiteLive({ initialRows }: { initialRows: OnSiteRow[] }) {
     }
 
     const channel = supabase
-      .channel("rcg-live-sessions")
+      .channel("rcg-live-presence")
       .on("postgres_changes", { event: "*", schema: "public", table: "sessions" }, () => void refresh())
+      .on("postgres_changes", { event: "*", schema: "public", table: "presence_check_requests" }, () => void refresh())
       .subscribe();
 
     const timer = window.setInterval(refresh, 60_000);
@@ -115,10 +195,21 @@ export function OnSiteLive({ initialRows }: { initialRows: OnSiteRow[] }) {
   }, []);
 
   const verifiedCount = useMemo(
-    () => rows.filter((row) => row.presence_state === "verified_on_site").length,
+    () => rows.filter((row) => row.current_presence_status === "on_site").length,
     [rows],
   );
-  const exceptionCount = rows.length - verifiedCount;
+  const offSiteCount = useMemo(
+    () => rows.filter((row) => row.current_presence_status === "off_site").length,
+    [rows],
+  );
+  const unresolvedCount = useMemo(
+    () => rows.filter((row) =>
+      row.current_presence_status === "unverified"
+      || row.latest_presence_check_status === "pending"
+      || row.latest_presence_check_status === "location_unavailable"
+    ).length,
+    [rows],
+  );
 
   return (
     <section className="card p-5 sm:p-6">
@@ -126,11 +217,12 @@ export function OnSiteLive({ initialRows }: { initialRows: OnSiteRow[] }) {
         <div>
           <p className="section-kicker">Live presence</p>
           <h2 className="text-2xl font-black">
-            {verifiedCount} {verifiedCount === 1 ? "person" : "people"} verified on site
+            {verifiedCount} {verifiedCount === 1 ? "person" : "people"} currently recorded on site
           </h2>
           <p className="mt-1 text-sm text-[var(--rcg-muted)]">
-            {rows.length} currently clocked in
-            {exceptionCount ? ` · ${exceptionCount} need${exceptionCount === 1 ? "s" : ""} location review` : ""}
+            {rows.length} clocked in
+            {offSiteCount ? ` · ${offSiteCount} off site` : ""}
+            {unresolvedCount ? ` · ${unresolvedCount} unresolved` : ""}
           </p>
         </div>
         <div className="rounded-full bg-[var(--rcg-green-soft)] px-5 py-3 text-3xl font-black text-[var(--rcg-green-dark)]">
@@ -141,33 +233,42 @@ export function OnSiteLive({ initialRows }: { initialRows: OnSiteRow[] }) {
       {rows.length ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {rows.map((row) => {
-            const verification = verificationCopy(row);
+            const presence = presenceCopy(row);
+            const check = checkCopy(row);
             const badgeClass =
-              verification.tone === "ok"
+              presence.tone === "ok"
                 ? "border-green-200 bg-green-50 text-green-800"
-                : verification.tone === "warn"
+                : presence.tone === "warn"
                   ? "border-amber-200 bg-amber-50 text-amber-900"
                   : "border-slate-200 bg-slate-50 text-slate-700";
+            const checkPending = ["pending", "location_unavailable"].includes(row.latest_presence_check_status ?? "");
 
             return (
               <article className="rounded-2xl border border-[var(--rcg-border)] bg-white p-5 shadow-sm" key={row.session_id}>
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <div className="mb-2 flex items-center gap-2">
-                      <span className={`status-dot ${row.presence_state === "verified_on_site" ? "active" : ""}`} />
+                      <span className={`status-dot ${row.current_presence_status === "on_site" ? "active" : ""}`} />
                       <strong className="text-lg">{row.full_name}</strong>
                     </div>
                     <span className="badge">{row.role}</span>
                   </div>
                   <span className="text-2xl" aria-hidden="true">
-                    {row.presence_state === "verified_on_site" ? "🌿" : "⚠"}
+                    {row.current_presence_status === "on_site" ? "🌿" : row.current_presence_status === "off_site" ? "↗" : "?"}
                   </span>
                 </div>
 
                 <div className={`mt-4 rounded-xl border px-3 py-2 text-sm ${badgeClass}`}>
-                  <div className="font-extrabold">{verification.label}</div>
-                  {verification.detail ? <div className="mt-1">{verification.detail}</div> : null}
+                  <div className="font-extrabold">{presence.label}</div>
+                  {presence.detail ? <div className="mt-1">{presence.detail}</div> : null}
                 </div>
+
+                {check ? (
+                  <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900">
+                    <div className="font-extrabold">{check.label}</div>
+                    <div className="mt-1">{check.detail}</div>
+                  </div>
+                ) : null}
 
                 <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
                   <div>
@@ -175,21 +276,27 @@ export function OnSiteLive({ initialRows }: { initialRows: OnSiteRow[] }) {
                     <dd className="mt-1 font-extrabold">{formatTime(row.clock_in_at)}</dd>
                   </div>
                   <div>
-                    <dt className="text-[var(--rcg-muted)]">Clocked duration</dt>
+                    <dt className="text-[var(--rcg-muted)]">Work duration</dt>
                     <dd className="mt-1 font-extrabold">
                       {Math.floor(row.duration_minutes / 60)}h {row.duration_minutes % 60}m
                     </dd>
                   </div>
-                  {row.first_on_site_verified_at ? (
+                  {row.current_presence_status_at ? (
                     <div className="col-span-2">
-                      <dt className="text-[var(--rcg-muted)]">First verified on site</dt>
-                      <dd className="mt-1 font-extrabold">
-                        {formatTime(row.first_on_site_verified_at)}
-                        {row.first_on_site_verification_method ? ` · ${row.first_on_site_verification_method.toUpperCase()}` : ""}
-                      </dd>
+                      <dt className="text-[var(--rcg-muted)]">Current presence last updated</dt>
+                      <dd className="mt-1 font-extrabold">{formatTime(row.current_presence_status_at)}</dd>
                     </div>
                   ) : null}
                 </dl>
+
+                {canRequestPresenceCheck ? (
+                  <form action={requestPresenceCheck} className="mt-5">
+                    <input type="hidden" name="sessionId" value={row.session_id} />
+                    <button className="btn btn-secondary w-full" type="submit">
+                      {checkPending ? "Send presence check again" : "Request presence check"}
+                    </button>
+                  </form>
+                ) : null}
               </article>
             );
           })}
