@@ -123,7 +123,13 @@ Deno.serve(async (req) => {
     action = "clock_out";
     const { error } = await supabase
       .from("sessions")
-      .update({ clock_out_at: now, clock_out_method: "kiosk" })
+      .update({
+        clock_out_at: now,
+        clock_out_method: "kiosk",
+        current_presence_status: "off_site",
+        current_presence_status_at: now,
+        current_presence_source: "kiosk_clock_out",
+      })
       .eq("id", openSession.id)
       .is("clock_out_at", null);
     if (error) return json({ error: "Could not clock out." }, 500);
@@ -139,6 +145,9 @@ Deno.serve(async (req) => {
       first_on_site_verification_method: "kiosk",
       last_presence_check_at: now,
       last_presence_distance_m: 0,
+      current_presence_status: "on_site",
+      current_presence_status_at: now,
+      current_presence_source: "kiosk",
     });
     if (error) return json({ error: "Could not clock in." }, 500);
   }
