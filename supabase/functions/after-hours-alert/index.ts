@@ -121,6 +121,30 @@ async function sendEmail(apiKey: string, from: string, to: string, subject: stri
   return response.ok;
 }
 
+async function ensureVapidKeys(
+  admin: ReturnType<typeof createClient>,
+  configuredPublicKey: string | null | undefined,
+) {
+  let publicKey = String(configuredPublicKey ?? "");
+  const { data: storedPrivateKey } = await admin.rpc("get_web_push_private_key");
+  let privateKey = storedPrivateKey ? String(storedPrivateKey) : "";
+
+  if (!publicKey || !privateKey) {
+    const generated = webpush.generateVAPIDKeys();
+    const { error } = await admin.rpc("configure_web_push_keys", {
+      p_public_key: generated.publicKey,
+      p_private_key: generated.privateKey,
+    });
+
+    if (!error) {
+      publicKey = generated.publicKey;
+      privateKey = generated.privateKey;
+    }
+  }
+
+  return { publicKey, privateKey };
+}
+
 async function notifyUser(
   admin: ReturnType<typeof createClient>,
   settings: Settings,
@@ -129,11 +153,10 @@ async function notifyUser(
   nowIso: string,
 ) {
   let pushSent = 0;
-  const { data: privateKey } = await admin.rpc("get_web_push_private_key");
-  const publicKey = settings.vapid_public_key ?? "";
+  const { publicKey, privateKey } = await ensureVapidKeys(admin, settings.vapid_public_key);
 
   if (publicKey && privateKey) {
-    webpush.setVapidDetails("mailto:alerts@rcgclocking.app", publicKey, String(privateKey));
+    webpush.setVapidDetails("mailto:alerts@rcgclocking.app", publicKey, privateKey);
 
     const { data: subscriptionsData } = await admin
       .from("push_subscriptions")
@@ -231,6 +254,11 @@ Deno.serve(async (req) => {
   const settings = settingsData as Settings | null;
   if (settingsError || !settings) return reply({ error: "Application settings are missing." }, 500);
   if (!settings.alert_enabled) return reply({ success: true, skipped: "disabled" });
+
+  if (settings.presence_check_enabled) {
+    const vapid = await ensureVapidKeys(admin, settings.vapid_public_key);
+    if (vapid.publicKey) settings.vapid_public_key = vapid.publicKey;
+  }
 
   const now = new Date();
   const nowIso = now.toISOString();
