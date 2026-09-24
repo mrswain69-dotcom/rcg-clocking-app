@@ -159,7 +159,7 @@ export function PresenceCheckPanel({ request }: { request: PresenceCheckRequest 
           </button>
         ) : null}
 
-        {locationUnavailable ? (
+        {(locationUnavailable || offSiteDetected) ? (
           <button className="btn btn-soft" type="button" onClick={() => void confirmOnSite()} disabled={busyAction !== null || checking}>
             {busyAction === "onsite" ? "Saving…" : "I'm still at RCG"}
           </button>
