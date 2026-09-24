@@ -6,7 +6,7 @@ This guide covers normal administration of the production RCG Clocking App.
 
 Users sign in on their own device to clock in/out and see their history. The shared tablet uses `/kiosk` and asks for a short code/email plus PIN. Attendance writes require an internet connection.
 
-Administrators use **Admin** to see the live on-site list. The list is derived from sessions with a clock-in time and no clock-out time; there is no separate presence register.
+Administrators use **Admin** to see the live presence list. Working time and physical presence are separate: an open session means the person is still clocked in for work, while the current presence state records whether they are verified on site, off site, or unverified. Kiosk clock-ins are on-site verified automatically; mobile clock-ins can use GPS verification.
 
 ## User management
 
@@ -33,11 +33,14 @@ Use **Admin → After-hours alerts** to configure:
 - site name
 - timezone
 - normal closing time
-- grace period
-- repeat interval
-- active recipient email addresses
+- grace period before the user self-check
+- user response / escalation window
+- management repeat interval
+- active escalation recipient email addresses
 
-The Supabase scheduler checks every five minutes. It sends only when alerts are enabled, at least one session is still open beyond closing time plus the grace period, and the configured repeat interval has elapsed since the previous alert.
+The Supabase scheduler checks every five minutes. When enabled, a person still recorded on site after closing + grace is asked to confirm their status first. Web Push is used when the device has opted in; otherwise email is the fallback. If the check remains unresolved for the configured escalation window, management recipients are emailed. The management view receives only on-site, off-site or unresolved status — not the person's exact ping location.
+
+The user can resolve the check by confirming/allowing a site check, stating that they have left but are still working, or choosing **I already left — clock me out** and entering the time they actually left. Administrators can also use **Request presence check** from the live presence card at any time.
 
 Before first enablement:
 
@@ -45,8 +48,9 @@ Before first enablement:
 2. Keep alerts disabled.
 3. Add one or more active recipients in the app.
 4. Click **Send test to active recipients** and confirm delivery.
-5. Confirm closing time, timezone, grace period and repeat interval.
-6. Enable alerts and save.
+5. Confirm closing time, timezone, grace period, response window and repeat interval.
+6. Users should enable **Safety notifications** on supported personal devices; users who do not enable Web Push receive email fallback.
+7. Enable alerts and save.
 
 The default sender is `RCG Clocking <alerts@rcgclocking.app>`.
 
