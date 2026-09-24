@@ -27,7 +27,9 @@ The approved architecture and database/security documents in `/docs` remain the 
 - Kiosk clocking with short code/email + securely hashed PIN, lockout and audit events
 - Manual attendance correction, missing-session addition and manual clock-out with audit logging
 - Admin attendance reports by user/date range with detailed and summary CSV exports
-- After-hours safety alerts with configurable closing time, grace period, repeat interval and recipients
+- Location-aware clock-in evidence with on-site/off-site/unverified presence separated from working hours
+- Actionable after-hours presence checks with Web Push, email fallback, corrected leave time and management escalation
+- Admin-requested presence checks from the live safety view
 - Five-minute Supabase Cron checker with Vault-backed scheduler authentication
 - Audit log and developer diagnostics/event viewer
 - Global operational settings for site name/timezone
@@ -69,8 +71,9 @@ Alerts intentionally remain disabled until the operational owner has:
 1. Added `RESEND_API_KEY` to Supabase Edge Function secrets.
 2. Added at least one active recipient under **Admin → After-hours alerts**.
 3. Used **Send test to active recipients** and confirmed receipt.
-4. Confirmed closing time, timezone, grace and repeat settings.
-5. Enabled after-hours alerts and saved.
+4. Confirmed closing time, timezone, grace, user response window and repeat settings.
+5. Asked users to enable Safety notifications on supported personal devices (email remains the fallback).
+6. Enabled after-hours alerts and saved.
 
 The scheduler itself runs every five minutes and exits safely when alerts are disabled.
 
