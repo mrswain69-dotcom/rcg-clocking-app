@@ -398,9 +398,9 @@ $$;
 revoke all on function public.record_presence_check(uuid,double precision,double precision,double precision) from public, anon;
 grant execute on function public.record_presence_check(uuid,double precision,double precision,double precision) to authenticated;
 
--- Browser clock-ins now go through the controlled RPC so location evidence cannot be
--- silently omitted by directly inserting a normal web session through the Data API.
-revoke insert on public.sessions from authenticated;
+-- Keep the existing authenticated INSERT grant during rollout so the current production
+-- app remains compatible until the location-aware frontend is promoted. A later hardening
+-- migration can revoke direct INSERT once the new RPC path is established in production.
 
 drop view if exists public.current_on_site_view;
 drop function if exists public.authorized_current_on_site_rows();
