@@ -99,12 +99,17 @@ Deno.serve(async (req) => {
     const grace = Number(body.alert_grace_minutes);
     const repeat = Number(body.alert_repeat_minutes);
     const enabled = body.alert_enabled === true;
+    const presenceCheckEnabled = body.presence_check_enabled !== false;
+    const escalationMinutes = Number(body.presence_check_escalation_minutes);
 
     if (!siteName || siteName.length > 120) return reply({ error: "Site name is required and must be 120 characters or fewer." }, 400);
     if (!validTimezone(timezone)) return reply({ error: "Enter a valid timezone." }, 400);
     if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(closingTime)) return reply({ error: "Closing time must use HH:MM." }, 400);
     if (!Number.isInteger(grace) || grace < 0 || grace > 240) return reply({ error: "Grace period must be 0–240 minutes." }, 400);
     if (!Number.isInteger(repeat) || repeat < 15 || repeat > 1440) return reply({ error: "Repeat interval must be 15–1440 minutes." }, 400);
+    if (!Number.isInteger(escalationMinutes) || escalationMinutes < 1 || escalationMinutes > 120) {
+      return reply({ error: "Presence-check escalation must be 1–120 minutes." }, 400);
+    }
 
     const next = {
       site_name: siteName,
@@ -113,6 +118,8 @@ Deno.serve(async (req) => {
       alert_enabled: enabled,
       alert_grace_minutes: grace,
       alert_repeat_minutes: repeat,
+      presence_check_enabled: presenceCheckEnabled,
+      presence_check_escalation_minutes: escalationMinutes,
     };
 
     const { error } = await admin.from("settings").update(next).eq("id", settings.id);
@@ -124,6 +131,8 @@ Deno.serve(async (req) => {
       alert_enabled: settings.alert_enabled,
       alert_grace_minutes: settings.alert_grace_minutes,
       alert_repeat_minutes: settings.alert_repeat_minutes,
+      presence_check_enabled: settings.presence_check_enabled,
+      presence_check_escalation_minutes: settings.presence_check_escalation_minutes,
     }, new: next });
     return reply({ success: true });
   }
