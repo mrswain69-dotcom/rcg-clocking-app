@@ -65,7 +65,6 @@ export async function verifyOnSite(
   sessionId: string,
   location: BrowserLocation,
 ): Promise<PresenceCheckResult> {
-  await requireProfile();
   const { supabase } = await requireProfile();
 
   const { data, error } = await supabase
