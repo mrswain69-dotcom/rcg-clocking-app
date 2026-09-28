@@ -58,6 +58,39 @@ Deno.serve(async (req) => {
     });
   }
 
+  if (action === "create_attendance_person") {
+    const fullName = String(body.full_name ?? "").trim();
+    if (fullName.length < 2 || fullName.length > 120) {
+      return reply({ error: "Enter a name between 2 and 120 characters." }, 400);
+    }
+
+    const { data: profile, error } = await admin
+      .from("profiles")
+      .insert({
+        user_id: null,
+        email: null,
+        full_name: fullName,
+        role: "user",
+        profile_type: "attendance_only",
+        can_use_kiosk: false,
+        can_view_currently_on_site: false,
+        can_receive_safety_alerts: false,
+      })
+      .select("id")
+      .single();
+
+    if (error || !profile) {
+      return reply({ error: "Unable to create the attendance-only person." }, 400);
+    }
+
+    await audit("attendance_person_created", profile.id, {
+      full_name: fullName,
+      profile_type: "attendance_only",
+    });
+
+    return reply({ success: true, profile_id: profile.id });
+  }
+
   if (action === "create_user") {
     const fullName = String(body.full_name ?? "").trim();
     const email = String(body.email ?? "").trim().toLowerCase();
@@ -116,7 +149,7 @@ Deno.serve(async (req) => {
 
   const { data: target } = await admin
     .from("profiles")
-    .select("id,user_id,full_name,email,role,is_active,archived_at,can_view_currently_on_site,can_use_kiosk")
+    .select("id,user_id,full_name,email,role,profile_type,is_active,archived_at,can_view_currently_on_site,can_use_kiosk")
     .eq("id", targetId)
     .maybeSingle();
   if (!target) return reply({ error: "User not found." }, 404);
@@ -124,6 +157,9 @@ Deno.serve(async (req) => {
   if (action === "delete_user") {
     if (actor.role !== "owner") return reply({ error: "Only the owner can permanently delete users." }, 403);
     if (target.role === "owner") return reply({ error: "The owner account cannot be deleted." }, 400);
+    if (target.profile_type === "attendance_only") {
+      return reply({ error: "Attendance-only people should be archived rather than permanently deleted so historical attendance remains attributable." }, 400);
+    }
 
     const confirmation = String(body.confirm_email ?? "").trim().toLowerCase();
     if (confirmation !== String(target.email).toLowerCase()) {
@@ -159,6 +195,7 @@ Deno.serve(async (req) => {
   }
 
   if (action === "set_role") {
+    if (target.profile_type === "attendance_only") return reply({ error: "This setting is not available for attendance-only people." }, 400);
     if (actor.role !== "owner") return reply({ error: "Only the owner can change roles." }, 403);
     if (target.role === "owner") return reply({ error: "The owner role is protected." }, 400);
     const role = String(body.role ?? "") as Role;
@@ -171,6 +208,7 @@ Deno.serve(async (req) => {
   }
 
   if (action === "set_presence_visibility") {
+    if (target.profile_type === "attendance_only") return reply({ error: "This setting is not available for attendance-only people." }, 400);
     const enabled = body.enabled === true;
     const { error } = await admin.from("profiles").update({ can_view_currently_on_site: enabled }).eq("id", targetId);
     if (error) return reply({ error: "Unable to update presence visibility." }, 400);
@@ -179,6 +217,7 @@ Deno.serve(async (req) => {
   }
 
   if (action === "set_kiosk_access") {
+    if (target.profile_type === "attendance_only") return reply({ error: "This setting is not available for attendance-only people." }, 400);
     const enabled = body.enabled === true;
     const { error } = await admin.from("profiles").update({ can_use_kiosk: enabled }).eq("id", targetId);
     if (error) return reply({ error: "Unable to update kiosk access." }, 400);
@@ -187,6 +226,7 @@ Deno.serve(async (req) => {
   }
 
   if (action === "reset_pin") {
+    if (target.profile_type === "attendance_only") return reply({ error: "This setting is not available for attendance-only people." }, 400);
     const pin = String(body.pin ?? "");
     if (!/^\d{4,6}$/.test(pin)) return reply({ error: "PIN must be 4–6 digits." }, 400);
     const pinHash = await bcrypt.hash(pin, 12);
