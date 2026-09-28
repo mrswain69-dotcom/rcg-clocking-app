@@ -19,6 +19,7 @@ export async function createUser(formData: FormData) {
     email: String(formData.get("email") ?? ""),
     password: String(formData.get("password") ?? ""),
     role: String(formData.get("role") ?? "user"),
+    attendance_category: String(formData.get("attendanceCategory") ?? "registered"),
     short_code: String(formData.get("shortCode") ?? ""),
     pin: String(formData.get("pin") ?? ""),
   });
@@ -49,5 +50,25 @@ export async function deleteUser(formData: FormData) {
     action: "delete_user",
     profile_id: String(formData.get("profileId") ?? ""),
     confirm_email: String(formData.get("confirmEmail") ?? ""),
+  });
+}
+
+
+export async function setAttendanceCategory(formData: FormData) {
+  await invoke({
+    action: "set_attendance_category",
+    profile_id: String(formData.get("profileId") ?? ""),
+    attendance_category: String(formData.get("attendanceCategory") ?? ""),
+    organisation: String(formData.get("organisation") ?? ""),
+  });
+}
+
+export async function promoteAttendancePerson(formData: FormData) {
+  await invoke({
+    action: "promote_attendance_person",
+    profile_id: String(formData.get("profileId") ?? ""),
+    email: String(formData.get("email") ?? ""),
+    password: String(formData.get("password") ?? ""),
+    attendance_category: String(formData.get("attendanceCategory") ?? "regular_volunteer"),
   });
 }
