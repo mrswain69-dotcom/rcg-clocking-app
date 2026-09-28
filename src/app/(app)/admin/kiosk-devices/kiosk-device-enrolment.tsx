@@ -54,9 +54,20 @@ export function KioskDeviceEnrolment() {
       </p>
 
       {registeredLabel ? (
-        <p className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
-          This browser already contains kiosk credentials for <strong>{registeredLabel}</strong>. Enrolling again creates a new device record.
-        </p>
+        <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+          <p>This browser already contains kiosk credentials for <strong>{registeredLabel}</strong>. Enrolling again creates a new device record.</p>
+          <button
+            className="btn btn-secondary mt-3"
+            type="button"
+            onClick={async () => {
+              const supabase = createClient();
+              await supabase.auth.signOut();
+              window.location.assign("/kiosk");
+            }}
+          >
+            Sign out admin & return to kiosk
+          </button>
+        </div>
       ) : null}
       {error ? <p className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p> : null}
 
