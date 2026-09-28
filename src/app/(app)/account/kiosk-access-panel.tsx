@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 type KioskStatus = {
+  allowed: boolean;
   enabled: boolean;
   email: string;
   short_code: string | null;
@@ -116,15 +117,20 @@ export function KioskAccessPanel() {
           </p>
         </div>
         <span className={"badge " + (status?.enabled && status.pin_set ? "" : "!bg-slate-100 !text-slate-600")}>
-          {status?.enabled && status.pin_set ? "Ready" : "Not configured"}
+          {!status ? "Checking…" : !status.allowed ? "Disabled by RCG" : status.enabled && status.pin_set ? "Ready" : "Not configured"}
         </span>
       </div>
 
+      {status && !status.allowed ? (
+        <p className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+          Kiosk access has been disabled for this account by RCG. Your private app access is unchanged. Ask an administrator if you need kiosk access restored.
+        </p>
+      ) : null}
       {error ? <p className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p> : null}
       {message ? <p className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">{message}</p> : null}
 
       <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_.9fr]">
-        <form className="space-y-4" onSubmit={save}>
+        <form className="space-y-4" onSubmit={save} aria-disabled={status ? !status.allowed : true}>
           <div>
             <label className="mb-1 block text-sm font-extrabold" htmlFor="kiosk-pin">Set / change PIN</label>
             <input
@@ -139,6 +145,7 @@ export function KioskAccessPanel() {
               minLength={4}
               maxLength={6}
               required
+              disabled={!status?.allowed}
             />
           </div>
 
@@ -156,13 +163,14 @@ export function KioskAccessPanel() {
               placeholder="e.g. PAUL"
               minLength={3}
               maxLength={12}
+              disabled={!status?.allowed}
             />
             <p className="mt-1 text-xs text-[var(--rcg-muted)]">
               {availability ?? "Optional. Your email will always work as your kiosk identifier."}
             </p>
           </div>
 
-          <button className="btn btn-primary" type="submit" disabled={busy || pin.length < 4}>
+          <button className="btn btn-primary" type="submit" disabled={busy || pin.length < 4 || !status?.allowed}>
             {busy ? "Saving…" : status?.pin_set ? "Update kiosk access" : "Enable kiosk access"}
           </button>
         </form>
@@ -174,7 +182,7 @@ export function KioskAccessPanel() {
             <div><dt className="font-bold text-[var(--rcg-muted)]">Short code</dt><dd className="font-extrabold">{status?.short_code ?? "Not set"}</dd></div>
             <div><dt className="font-bold text-[var(--rcg-muted)]">PIN</dt><dd className="font-extrabold">{status?.pin_set ? "Configured ✓" : "Not set"}</dd></div>
           </dl>
-          {status?.enabled ? (
+          {status?.allowed && status?.enabled ? (
             <button className="btn btn-soft mt-4 w-full" type="button" onClick={() => void disable()} disabled={busy}>
               Disable my kiosk access
             </button>
