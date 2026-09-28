@@ -4,6 +4,12 @@ import { MetricCard } from "@/components/brand/MetricCard";
 import { PageHeader } from "@/components/brand/PageHeader";
 import { requireAdminProfile } from "@/lib/auth";
 import { durationHours, formatHoursMinutes, formatUkDateTime } from "@/lib/dates";
+import {
+  arrivalDelayMinutes,
+  locationEvidenceDetail,
+  locationEvidenceLabel,
+  locationEvidenceTone,
+} from "@/lib/location-evidence";
 import { ReportExports } from "./report-export";
 
 export const metadata: Metadata = { title: "Attendance reports" };
@@ -34,7 +40,7 @@ export default async function AdminReportsPage({ searchParams }: PageProps) {
 
   let query = supabase
     .from("sessions")
-    .select("id,profile_id,clock_in_at,clock_out_at,clock_in_method,clock_out_method,notes")
+    .select("id,profile_id,clock_in_at,clock_out_at,clock_in_method,clock_out_method,notes,clock_in_location_status,clock_in_distance_m,clock_in_accuracy_m,first_on_site_verified_at,first_on_site_verification_method,last_presence_check_at")
     .gte("clock_in_at", `${from}T00:00:00.000Z`)
     .lte("clock_in_at", `${to}T23:59:59.999Z`)
     .order("clock_in_at", { ascending: false })
@@ -46,6 +52,8 @@ export default async function AdminReportsPage({ searchParams }: PageProps) {
 
   const rows = sessions.map((session) => {
     const profile = profileById.get(session.profile_id);
+    const arrivalDelay = arrivalDelayMinutes(session.clock_in_at, session.first_on_site_verified_at);
+
     return {
       id: session.id,
       full_name: profile?.full_name ?? "Unknown user",
@@ -56,6 +64,15 @@ export default async function AdminReportsPage({ searchParams }: PageProps) {
       clock_out_method: session.clock_out_method,
       notes: session.notes,
       hours: durationHours(session.clock_in_at, session.clock_out_at),
+      clock_in_location_status: session.clock_in_location_status,
+      clock_in_distance_m: session.clock_in_distance_m,
+      clock_in_accuracy_m: session.clock_in_accuracy_m,
+      first_on_site_verified_at: session.first_on_site_verified_at,
+      first_on_site_verification_method: session.first_on_site_verification_method,
+      last_presence_check_at: session.last_presence_check_at,
+      location_label: locationEvidenceLabel(session.clock_in_location_status),
+      location_detail: locationEvidenceDetail(session),
+      arrival_delay_minutes: arrivalDelay,
     };
   });
 
@@ -66,15 +83,18 @@ export default async function AdminReportsPage({ searchParams }: PageProps) {
     current.hours += row.hours;
     summaryMap.set(row.email, current);
   }
+
   const summary = [...summaryMap.values()].sort((a, b) => a.full_name.localeCompare(b.full_name));
   const totalHours = rows.reduce((sum, row) => sum + row.hours, 0);
+  const outsideCount = rows.filter((row) => row.clock_in_location_status === "outside_site").length;
+  const unavailableCount = rows.filter((row) => ["location_unavailable", "location_uncertain", "near_boundary"].includes(row.clock_in_location_status ?? "")).length;
 
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="Administration"
         title="Attendance reports"
-        description="Filter by date and person, review totals and export detailed or summary records."
+        description="Filter by date and person, review hours and location verification evidence, and export detailed records."
         action={<Link className="btn btn-secondary" href="/admin">← Admin</Link>}
       />
 
@@ -88,10 +108,11 @@ export default async function AdminReportsPage({ searchParams }: PageProps) {
         </form>
       </section>
 
-      <section className="metrics-grid">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard icon="▤" label="Visits" value={String(rows.length)} detail="Sessions in range" tone="orange" />
-        <MetricCard icon="👥" label="People" value={String(summary.length)} detail="People represented" />
         <MetricCard icon="◷" label="Recorded hours" value={formatHoursMinutes(totalHours)} detail={`${from} to ${to}`} tone="neutral" />
+        <MetricCard icon="↗" label="Outside-site clock-ins" value={String(outsideCount)} detail="GPS clearly outside RCG" tone={outsideCount ? "orange" : "neutral"} />
+        <MetricCard icon="?" label="Unverified / uncertain" value={String(unavailableCount)} detail="No reliable clock-in location" tone="neutral" />
       </section>
 
       <section className="card p-5 sm:p-6">
@@ -103,8 +124,65 @@ export default async function AdminReportsPage({ searchParams }: PageProps) {
       </section>
 
       <section className="card p-5 sm:p-6">
-        <div><p className="section-kicker">Detail</p><h2 className="text-2xl font-black">Session records</h2></div>
-        <div className="mt-4 table-wrap"><table><thead><tr><th>User</th><th>Clock in</th><th>Clock out</th><th>Duration</th><th>Method</th><th>Notes</th></tr></thead><tbody>{rows.length ? rows.map((row) => <tr key={row.id}><td className="font-extrabold">{row.full_name}</td><td>{formatUkDateTime(row.clock_in_at)}</td><td>{formatUkDateTime(row.clock_out_at)}</td><td className="font-extrabold">{formatHoursMinutes(row.hours)}</td><td><span className="badge">{row.clock_in_method}</span></td><td>{row.notes ?? "—"}</td></tr>) : <tr><td colSpan={6} className="text-[var(--rcg-muted)]">No records found.</td></tr>}</tbody></table></div>
+        <div>
+          <p className="section-kicker">Detail</p>
+          <h2 className="text-2xl font-black">Session & location records</h2>
+          <p className="mt-1 text-sm text-[var(--rcg-muted)]">GPS distance is measured outside the configured RCG boundary. Exact coordinates are not shown or stored in this report.</p>
+        </div>
+
+        <div className="mt-4 table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Clock in</th>
+                <th>Clock out</th>
+                <th>Duration</th>
+                <th>Method</th>
+                <th>Clock-in location</th>
+                <th>First verified on site</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.length ? rows.map((row) => {
+                const tone = locationEvidenceTone(row.clock_in_location_status);
+                const badgeClass =
+                  tone === "ok"
+                    ? "!bg-green-100 !text-green-800"
+                    : tone === "warn"
+                      ? "!bg-amber-100 !text-amber-900"
+                      : "!bg-slate-100 !text-slate-700";
+
+                return (
+                  <tr key={row.id}>
+                    <td className="font-extrabold">{row.full_name}</td>
+                    <td>{formatUkDateTime(row.clock_in_at)}</td>
+                    <td>{formatUkDateTime(row.clock_out_at)}</td>
+                    <td className="font-extrabold">{formatHoursMinutes(row.hours)}</td>
+                    <td><span className="badge">{row.clock_in_method}</span></td>
+                    <td className="min-w-64">
+                      <span className={`badge ${badgeClass}`}>{row.location_label}</span>
+                      <div className="mt-1 text-xs text-[var(--rcg-muted)]">{row.location_detail}</div>
+                    </td>
+                    <td className="min-w-48">
+                      {row.first_on_site_verified_at ? (
+                        <>
+                          <strong>{formatUkDateTime(row.first_on_site_verified_at)}</strong>
+                          <div className="mt-1 text-xs text-[var(--rcg-muted)]">
+                            {row.arrival_delay_minutes !== null ? `${row.arrival_delay_minutes} min after clock-in` : ""}
+                            {row.first_on_site_verification_method ? ` · ${row.first_on_site_verification_method.toUpperCase()}` : ""}
+                          </div>
+                        </>
+                      ) : "Not recorded"}
+                    </td>
+                    <td>{row.notes ?? "—"}</td>
+                  </tr>
+                );
+              }) : <tr><td colSpan={8} className="text-[var(--rcg-muted)]">No records found.</td></tr>}
+            </tbody>
+          </table>
+        </div>
       </section>
     </div>
   );
