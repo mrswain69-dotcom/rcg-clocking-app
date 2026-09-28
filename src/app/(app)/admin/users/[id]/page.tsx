@@ -64,7 +64,7 @@ export default async function AdminUserPage({ params }: { params: Promise<{ id: 
 
         <div className="space-y-4">
           {sessions.length ? sessions.map((session) => {
-            const tone = locationEvidenceTone(session.clock_in_location_status);
+            const tone = locationEvidenceTone(session.clock_in_location_status, session.clock_in_method);
             const evidenceClass =
               tone === "ok"
                 ? "border-green-200 bg-green-50 text-green-900"
@@ -85,7 +85,7 @@ export default async function AdminUserPage({ params }: { params: Promise<{ id: 
                 </div>
 
                 <div className={`mb-4 rounded-xl border p-3 text-sm ${evidenceClass}`}>
-                  <div className="font-extrabold">{locationEvidenceLabel(session.clock_in_location_status)}</div>
+                  <div className="font-extrabold">{locationEvidenceLabel(session.clock_in_location_status, session.clock_in_method)}</div>
                   <div className="mt-1">{locationEvidenceDetail(session)}</div>
                   {session.first_on_site_verified_at ? (
                     <div className="mt-2 border-t border-current/10 pt-2">
