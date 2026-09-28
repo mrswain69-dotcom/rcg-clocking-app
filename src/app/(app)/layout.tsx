@@ -1,11 +1,28 @@
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { MobileNav } from "@/components/mobile-nav";
+import { PresenceAutoVerifier } from "@/components/presence-auto-verifier";
 import { RealtimeRefresh } from "@/components/realtime-refresh";
 import { requireProfile } from "@/lib/auth";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const { profile } = await requireProfile();
+  const { profile, supabase } = await requireProfile();
+
+  const [{ data: openSession }, { data: settings }] = await Promise.all([
+    supabase
+      .from("sessions")
+      .select("id,clock_in_location_status,current_presence_status,current_presence_source,first_on_site_verified_at,last_presence_accuracy_m,last_presence_check_at")
+      .eq("profile_id", profile.id)
+      .is("clock_out_at", null)
+      .order("clock_in_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("settings")
+      .select("site_location_accuracy_limit_m")
+      .limit(1)
+      .maybeSingle(),
+  ]);
   const adminLike = ["owner", "admin", "developer"].includes(profile.role);
   const developerLike = ["owner", "developer"].includes(profile.role);
   const canViewOnSite = adminLike || profile.can_view_currently_on_site;
@@ -33,7 +50,21 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
       </header>
 
-      <main className="shell app-main">{children}</main>
+      <main className="shell app-main">
+        {openSession ? (
+          <PresenceAutoVerifier
+            sessionId={openSession.id}
+            clockInLocationStatus={openSession.clock_in_location_status}
+            currentPresenceStatus={openSession.current_presence_status}
+            currentPresenceSource={openSession.current_presence_source}
+            firstOnSiteVerifiedAt={openSession.first_on_site_verified_at}
+            lastPresenceAccuracyM={openSession.last_presence_accuracy_m}
+            lastPresenceCheckAt={openSession.last_presence_check_at}
+            accuracyLimitM={settings?.site_location_accuracy_limit_m ?? 100}
+          />
+        ) : null}
+        {children}
+      </main>
 
       <MobileNav
         canViewOnSite={canViewOnSite}
