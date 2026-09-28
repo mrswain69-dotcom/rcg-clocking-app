@@ -62,6 +62,7 @@ export function MobileNav({ canViewOnSite, adminLike, developerLike }: MobileNav
               <Link href="/admin/users" onClick={closeMore}>♟ <span>Users</span></Link>
               <Link href="/admin/reports" onClick={closeMore}>▤ <span>Reports</span></Link>
               <Link href="/admin/alerts" onClick={closeMore}>⚠ <span>After-hours safety</span></Link>
+              <Link href="/admin/kiosk-devices" onClick={closeMore}>▣ <span>Kiosk devices</span></Link>
               <Link href="/admin/audit" onClick={closeMore}>≡ <span>Audit log</span></Link>
             </>
           ) : null}
