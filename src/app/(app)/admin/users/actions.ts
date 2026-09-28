@@ -19,29 +19,50 @@ export async function createUser(formData: FormData) {
     email: String(formData.get("email") ?? ""),
     password: String(formData.get("password") ?? ""),
     role: String(formData.get("role") ?? "user"),
+    attendance_category: String(formData.get("attendanceCategory") ?? "registered"),
     short_code: String(formData.get("shortCode") ?? ""),
     pin: String(formData.get("pin") ?? ""),
   });
 }
 
 export async function setUserActive(formData: FormData) {
-  await invoke({ action: "set_active", profile_id: String(formData.get("profileId") ?? ""), active: String(formData.get("active")) === "true" });
+  await invoke({
+    action: "set_active",
+    profile_id: String(formData.get("profileId") ?? ""),
+    active: String(formData.get("active")) === "true",
+  });
 }
 
 export async function setUserRole(formData: FormData) {
-  await invoke({ action: "set_role", profile_id: String(formData.get("profileId") ?? ""), role: String(formData.get("role") ?? "user") });
+  await invoke({
+    action: "set_role",
+    profile_id: String(formData.get("profileId") ?? ""),
+    role: String(formData.get("role") ?? "user"),
+  });
 }
 
 export async function setPresenceVisibility(formData: FormData) {
-  await invoke({ action: "set_presence_visibility", profile_id: String(formData.get("profileId") ?? ""), enabled: String(formData.get("enabled")) === "true" });
+  await invoke({
+    action: "set_presence_visibility",
+    profile_id: String(formData.get("profileId") ?? ""),
+    enabled: String(formData.get("enabled")) === "true",
+  });
 }
 
 export async function setKioskAccess(formData: FormData) {
-  await invoke({ action: "set_kiosk_access", profile_id: String(formData.get("profileId") ?? ""), enabled: String(formData.get("enabled")) === "true" });
+  await invoke({
+    action: "set_kiosk_access",
+    profile_id: String(formData.get("profileId") ?? ""),
+    enabled: String(formData.get("enabled")) === "true",
+  });
 }
 
 export async function resetPin(formData: FormData) {
-  await invoke({ action: "reset_pin", profile_id: String(formData.get("profileId") ?? ""), pin: String(formData.get("pin") ?? "") });
+  await invoke({
+    action: "reset_pin",
+    profile_id: String(formData.get("profileId") ?? ""),
+    pin: String(formData.get("pin") ?? ""),
+  });
 }
 
 export async function deleteUser(formData: FormData) {
@@ -50,4 +71,27 @@ export async function deleteUser(formData: FormData) {
     profile_id: String(formData.get("profileId") ?? ""),
     confirm_email: String(formData.get("confirmEmail") ?? ""),
   });
+}
+
+export async function setAttendanceCategory(formData: FormData) {
+  const profileId = String(formData.get("profileId") ?? "");
+  await invoke({
+    action: "set_attendance_category",
+    profile_id: profileId,
+    attendance_category: String(formData.get("attendanceCategory") ?? ""),
+    organisation: String(formData.get("organisation") ?? ""),
+  });
+  revalidatePath("/admin/users/" + profileId);
+}
+
+export async function promoteAttendancePerson(formData: FormData) {
+  const profileId = String(formData.get("profileId") ?? "");
+  await invoke({
+    action: "promote_attendance_person",
+    profile_id: profileId,
+    email: String(formData.get("email") ?? ""),
+    password: String(formData.get("password") ?? ""),
+    attendance_category: String(formData.get("attendanceCategory") ?? "regular_volunteer"),
+  });
+  revalidatePath("/admin/users/" + profileId);
 }

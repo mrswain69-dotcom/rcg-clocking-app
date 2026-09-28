@@ -6,6 +6,8 @@ type ReportRow = {
   full_name: string;
   email: string;
   profile_type: string;
+  attendance_category: string;
+  organisation: string;
   clock_in_at: string;
   clock_out_at: string | null;
   clock_in_method: string;
@@ -28,6 +30,8 @@ type SummaryRow = {
   full_name: string;
   email: string;
   profile_type: string;
+  attendance_category: string;
+  organisation: string;
   visits: number;
   hours: number;
 };
@@ -62,6 +66,8 @@ export function ReportExports({ rows, summary, from, to }: { rows: ReportRow[]; 
           [
             "Name",
             "Email",
+            "Person type",
+            "Organisation",
             "Clock in",
             "Clock out",
             "Hours",
@@ -79,6 +85,8 @@ export function ReportExports({ rows, summary, from, to }: { rows: ReportRow[]; 
           ...rows.map((row) => [
             row.full_name,
             row.email,
+            row.attendance_category,
+            row.organisation,
             row.clock_in_at,
             row.clock_out_at ?? "",
             row.hours.toFixed(2),
@@ -102,10 +110,12 @@ export function ReportExports({ rows, summary, from, to }: { rows: ReportRow[]; 
         type="button"
         disabled={!summary.length}
         onClick={() => download(`rcg-hours-summary-${suffix}.csv`, [
-          ["Name", "Email / type", "Visits", "Hours"],
+          ["Name", "Email / access", "Person type", "Organisation", "Visits", "Hours"],
           ...summary.map((row) => [
             row.full_name,
             row.profile_type === "attendance_only" ? "Attendance only · no login" : row.email,
+            row.attendance_category,
+            row.organisation,
             row.visits,
             row.hours.toFixed(2),
           ]),

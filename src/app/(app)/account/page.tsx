@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { PageHeader } from "@/components/brand/PageHeader";
 import { requireProfile } from "@/lib/auth";
 import { changePassword } from "./actions";
+import { KioskAccessPanel } from "./kiosk-access-panel";
 
 export const metadata: Metadata = { title: "Account" };
 
@@ -48,6 +49,8 @@ export default async function AccountPage({
           </form>
         </article>
       </section>
+
+      <KioskAccessPanel />
 
       <aside className="decorative-panel">
         <div className="decorative-panel-icon">🌱</div>

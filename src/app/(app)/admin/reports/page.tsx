@@ -33,7 +33,7 @@ export default async function AdminReportsPage({ searchParams }: PageProps) {
   const { supabase } = await requireAdminProfile();
   const { data: profilesData } = await supabase
     .from("profiles")
-    .select("id,full_name,email,profile_type,is_active")
+    .select("id,full_name,email,profile_type,attendance_category,organisation,is_active")
     .order("full_name");
   const profiles = profilesData ?? [];
   const profileById = new Map(profiles.map((profile) => [profile.id, profile]));
@@ -60,6 +60,8 @@ export default async function AdminReportsPage({ searchParams }: PageProps) {
       full_name: profile?.full_name ?? "Unknown user",
       email: profile?.email ?? "",
       profile_type: profile?.profile_type ?? "account",
+      attendance_category: profile?.attendance_category ?? "registered",
+      organisation: profile?.organisation ?? "",
       clock_in_at: session.clock_in_at,
       clock_out_at: session.clock_out_at,
       clock_in_method: session.clock_in_method,
@@ -78,13 +80,15 @@ export default async function AdminReportsPage({ searchParams }: PageProps) {
     };
   });
 
-  const summaryMap = new Map<string, { profile_id: string; full_name: string; email: string; profile_type: string; visits: number; hours: number }>();
+  const summaryMap = new Map<string, { profile_id: string; full_name: string; email: string; profile_type: string; attendance_category: string; organisation: string; visits: number; hours: number }>();
   for (const row of rows) {
     const current = summaryMap.get(row.profile_id) ?? {
       profile_id: row.profile_id,
       full_name: row.full_name,
       email: row.email,
       profile_type: row.profile_type,
+      attendance_category: row.attendance_category,
+      organisation: row.organisation,
       visits: 0,
       hours: 0,
     };
@@ -95,6 +99,10 @@ export default async function AdminReportsPage({ searchParams }: PageProps) {
 
   const summary = [...summaryMap.values()].sort((a, b) => a.full_name.localeCompare(b.full_name));
   const totalHours = rows.reduce((sum, row) => sum + row.hours, 0);
+  const volunteerHours = rows
+    .filter((row) => ["regular_volunteer", "one_off_volunteer"].includes(row.attendance_category))
+    .reduce((sum, row) => sum + row.hours, 0);
+  const visitorVisits = rows.filter((row) => row.attendance_category === "visitor").length;
   const outsideCount = rows.filter((row) => row.clock_in_location_status === "outside_site").length;
   const unavailableCount = rows.filter((row) => ["location_unavailable", "location_uncertain", "near_boundary"].includes(row.clock_in_location_status ?? "")).length;
 
@@ -117,9 +125,11 @@ export default async function AdminReportsPage({ searchParams }: PageProps) {
         </form>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <MetricCard icon="▤" label="Visits" value={String(rows.length)} detail="Sessions in range" tone="orange" />
         <MetricCard icon="◷" label="Recorded hours" value={formatHoursMinutes(totalHours)} detail={`${from} to ${to}`} tone="neutral" />
+        <MetricCard icon="♣" label="Volunteer hours" value={formatHoursMinutes(volunteerHours)} detail="Regular + one-off volunteers" />
+        <MetricCard icon="◎" label="Visitor visits" value={String(visitorVisits)} detail="Presence only · excluded from volunteer hours" tone="neutral" />
         <MetricCard icon="↗" label="Outside-site clock-ins" value={String(outsideCount)} detail="GPS clearly outside RCG" tone={outsideCount ? "orange" : "neutral"} />
         <MetricCard icon="?" label="Unverified / uncertain" value={String(unavailableCount)} detail="No reliable clock-in location" tone="neutral" />
       </section>
@@ -129,7 +139,7 @@ export default async function AdminReportsPage({ searchParams }: PageProps) {
           <div><p className="section-kicker">Summary</p><h2 className="text-2xl font-black">People & hours</h2></div>
           <ReportExports rows={rows} summary={summary} from={from} to={to} />
         </div>
-        <div className="mt-4 table-wrap"><table><thead><tr><th>User</th><th>Visits</th><th>Hours</th></tr></thead><tbody>{summary.length ? summary.map((row) => <tr key={row.profile_id}><td><strong>{row.full_name}</strong><div className="text-xs text-[var(--rcg-muted)]">{row.profile_type === "attendance_only" ? "Attendance only · no login" : row.email}</div></td><td>{row.visits}</td><td className="font-extrabold">{formatHoursMinutes(row.hours)}</td></tr>) : <tr><td colSpan={3} className="text-[var(--rcg-muted)]">No attendance in this date range.</td></tr>}</tbody></table></div>
+        <div className="mt-4 table-wrap"><table><thead><tr><th>Person</th><th>Type</th><th>Visits</th><th>Hours</th></tr></thead><tbody>{summary.length ? summary.map((row) => <tr key={row.profile_id}><td><strong>{row.full_name}</strong><div className="text-xs text-[var(--rcg-muted)]">{row.profile_type === "attendance_only" ? "Attendance only · no login" : row.email}{row.organisation ? " · " + row.organisation : ""}</div></td><td><span className="badge">{row.attendance_category.replaceAll("_", " ")}</span></td><td>{row.visits}</td><td className="font-extrabold">{formatHoursMinutes(row.hours)}</td></tr>) : <tr><td colSpan={4} className="text-[var(--rcg-muted)]">No attendance in this date range.</td></tr>}</tbody></table></div>
       </section>
 
       <section className="card p-5 sm:p-6">
@@ -143,7 +153,8 @@ export default async function AdminReportsPage({ searchParams }: PageProps) {
           <table>
             <thead>
               <tr>
-                <th>User</th>
+                <th>Person</th>
+                <th>Type</th>
                 <th>Clock in</th>
                 <th>Clock out</th>
                 <th>Duration</th>
@@ -165,7 +176,8 @@ export default async function AdminReportsPage({ searchParams }: PageProps) {
 
                 return (
                   <tr key={row.id}>
-                    <td className="font-extrabold">{row.full_name}</td>
+                    <td><strong>{row.full_name}</strong>{row.organisation ? <div className="text-xs text-[var(--rcg-muted)]">{row.organisation}</div> : null}</td>
+                    <td><span className="badge">{row.attendance_category.replaceAll("_", " ")}</span></td>
                     <td>{formatUkDateTime(row.clock_in_at)}</td>
                     <td>{formatUkDateTime(row.clock_out_at)}</td>
                     <td className="font-extrabold">{formatHoursMinutes(row.hours)}</td>
@@ -188,7 +200,7 @@ export default async function AdminReportsPage({ searchParams }: PageProps) {
                     <td>{row.notes ?? "—"}</td>
                   </tr>
                 );
-              }) : <tr><td colSpan={8} className="text-[var(--rcg-muted)]">No records found.</td></tr>}
+              }) : <tr><td colSpan={9} className="text-[var(--rcg-muted)]">No records found.</td></tr>}
             </tbody>
           </table>
         </div>

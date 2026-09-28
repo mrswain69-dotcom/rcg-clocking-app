@@ -24,9 +24,12 @@ The approved architecture and database/security documents in `/docs` remain the 
 - Live currently-on-site view with per-user visibility permission
 - Admin user creation, archive/reactivation, role management and kiosk access controls
 - Owner-only permanent user deletion with explicit confirmation
-- Kiosk clocking with short code/email + securely hashed PIN, lockout and audit events
+- Trusted kiosk-device enrolment/revocation: only RCG-enrolled browsers can create kiosk-verified attendance
+- Self-service registered-user kiosk PIN + optional unique short code
+- Kiosk clocking for registered staff/regular volunteers plus reusable attendance-only visitor and one-off volunteer records
+- Attendance-only volunteer → registered account promotion without losing history
 - Manual attendance correction, missing-session addition and manual clock-out with audit logging
-- Admin attendance reports by user/date range with detailed and summary CSV exports
+- Admin attendance reports by user/date range with detailed/summary CSV exports, volunteer-hour totals and visitor counts
 - Location-aware clock-in evidence with on-site/off-site/unverified presence separated from working hours
 - Actionable after-hours presence checks with Web Push, email fallback, corrected leave time and management escalation
 - Admin-requested presence checks from the live safety view
@@ -83,6 +86,8 @@ The scheduler itself runs every five minutes and exits safely when alerts are di
 - RLS is enabled on all application data tables.
 - PIN hashes are service-role only and never shown in the UI.
 - Sensitive admin operations run through authenticated Edge Functions and write to `audit_log`.
+- Kiosk device secrets are stored only in the enrolled browser; Supabase stores a SHA-256 hash and validates it server-side.
+- Attendance-only visitors/one-off volunteers have no Supabase Auth account and therefore cannot privately log in from elsewhere.
 - One open attendance session per profile is enforced in the database.
 - The owner account is protected from normal demotion/archive/deletion flows.
 - Supabase Auth Leaked Password Protection should be enabled from the Supabase dashboard as an account-level hardening step.

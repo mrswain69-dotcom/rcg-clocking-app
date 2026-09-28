@@ -31,16 +31,27 @@ Use this checklist before broad staff/volunteer rollout. Run destructive tests w
 
 ## Kiosk
 
-- Valid short code/email + PIN clocks a kiosk-enabled user in/out.
+- A browser with no enrolled device credential cannot use kiosk attendance.
+- Admin can enrol the intended physical kiosk and is signed out before kiosk mode opens.
+- Active enrolled kiosk passes the server-side device check; revoking it immediately blocks further kiosk use.
+- Valid short code/email + PIN clocks a registered kiosk-enabled user in/out and records **Kiosk verified**.
+- Registered user can set/change PIN and optional unique short code under Account.
+- Duplicate/case-variant short codes are rejected.
 - PIN is not exposed to the client/database UI path.
-- Invalid PIN attempts are logged.
-- Five failed attempts trigger temporary lockout.
-- Success screen resets back to the neutral kiosk form.
-- A user with kiosk access disabled cannot clock via kiosk.
+- Invalid PIN attempts are logged; five failed attempts trigger temporary lockout.
+- One-off volunteer can search/reuse an existing attendance-only record or create a new one.
+- One-off volunteer kiosk session is kiosk-verified and included in volunteer-hour reporting.
+- Visitor can search/reuse or create an attendance-only visitor record; visitor time is excluded from volunteer-hour totals.
+- Same-name people can remain separate records where appropriate.
+- Success screen resets to kiosk home.
+- A registered user with kiosk access disabled cannot clock via kiosk.
 
 ## User administration
 
-- Admin can create a standard user, archive/reactivate, reset PIN and change capability flags.
+- Admin can create a registered employee/regular volunteer account and classify its person type.
+- Admin can close/reactivate account access while retaining attendance history.
+- Admin can archive/reactivate attendance-only people.
+- Admin can reset PIN and change capability flags.
 - Admin cannot change protected owner role or permanently delete the owner.
 - Owner can assign/remove admin and developer roles.
 - Owner permanent deletion requires exact typed email confirmation; test only with a disposable account.
@@ -116,3 +127,12 @@ Keep production alerts disabled until the first five checks pass.
 - Confirm an attendance-only open session is included in the site headcount but does not offer **Request presence check**.
 - Confirm the Audit log identifies the acting administrator, target person/session, reason and times for each manual action.
 - Confirm Reports and detailed CSV show the method as admin override and location as not verified.
+
+
+## Attendance-only promotion
+
+- Create a one-off volunteer on the kiosk and record at least one session.
+- In Admin → Manage people, open that person and promote them to a registered regular-volunteer account.
+- Confirm the same profile/person retains all historic attendance.
+- Confirm the new account can sign in privately but kiosk access remains unconfigured until a PIN is set.
+- Confirm the promoted person no longer appears as attendance-only.

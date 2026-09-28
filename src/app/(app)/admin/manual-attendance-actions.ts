@@ -53,10 +53,14 @@ export async function adminCreateAttendancePersonSession(formData: FormData) {
   const clockInLocal = String(formData.get("clockInAt") ?? "");
   const clockOutLocal = String(formData.get("clockOutAt") ?? "");
   const reason = String(formData.get("reason") ?? "");
+  const attendanceCategory = String(formData.get("attendanceCategory") ?? "visitor");
+  const organisation = String(formData.get("organisation") ?? "");
 
   const person = await invokeUser({
     action: "create_attendance_person",
     full_name: fullName,
+    attendance_category: attendanceCategory,
+    organisation,
   });
 
   if (!person.profile_id) throw new Error("The attendance-only person was created but no profile ID was returned.");

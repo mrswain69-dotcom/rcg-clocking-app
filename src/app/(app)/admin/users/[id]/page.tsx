@@ -11,13 +11,14 @@ import {
   locationEvidenceTone,
 } from "@/lib/location-evidence";
 import { addSession, closeSession, correctSession } from "./actions";
+import { promoteAttendancePerson, setAttendanceCategory } from "../actions";
 
 export const metadata: Metadata = { title: "User attendance" };
 
 export default async function AdminUserPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { supabase } = await requireAdminProfile();
-  const { data: user } = await supabase.from("profiles").select("id,full_name,email,role,profile_type,is_active").eq("id", id).maybeSingle();
+  const { data: user } = await supabase.from("profiles").select("id,full_name,email,role,profile_type,attendance_category,organisation,is_active").eq("id", id).maybeSingle();
   if (!user) notFound();
 
   const { data } = await supabase
@@ -33,9 +34,63 @@ export default async function AdminUserPage({ params }: { params: Promise<{ id: 
       <PageHeader
         eyebrow="Attendance administration"
         title={user.full_name}
-        description={`${user.profile_type === "attendance_only" ? "Attendance only · no login" : user.email} · ${user.role} · ${user.is_active ? "Active" : "Archived"}`}
+        description={`${user.profile_type === "attendance_only" ? "Attendance only · no login" : user.email} · ${user.attendance_category.replaceAll("_", " ")} · ${user.is_active ? "Active" : "Archived"}`}
         action={<Link className="btn btn-secondary" href="/admin/users">← Users</Link>}
       />
+
+      <section className="card p-5 sm:p-6">
+        <div className="mb-5">
+          <p className="section-kicker">Person record</p>
+          <h2 className="text-2xl font-black">Classification & access</h2>
+          <p className="mt-1 text-sm text-[var(--rcg-muted)]">
+            Attendance-only people keep their history without a login. A returning volunteer can be promoted to a registered account without creating a second person.
+          </p>
+        </div>
+
+        <form action={setAttendanceCategory} className="grid gap-4 md:grid-cols-3">
+          <input type="hidden" name="profileId" value={id} />
+          <div>
+            <label className="mb-1 block text-sm font-extrabold" htmlFor="person-category">Person type</label>
+            <select className="input" id="person-category" name="attendanceCategory" defaultValue={user.attendance_category}>
+              {user.profile_type === "account" ? (
+                <>
+                  <option value="registered">Registered person</option>
+                  <option value="employee">Employee</option>
+                  <option value="regular_volunteer">Regular volunteer</option>
+                  <option value="other">Other registered person</option>
+                </>
+              ) : (
+                <>
+                  <option value="one_off_volunteer">One-off volunteer</option>
+                  <option value="visitor">Visitor</option>
+                  <option value="other">Other attendance-only person</option>
+                </>
+              )}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-extrabold" htmlFor="person-organisation">Organisation</label>
+            <input className="input" id="person-organisation" name="organisation" defaultValue={user.organisation ?? ""} maxLength={160} disabled={user.profile_type === "account"} />
+          </div>
+          <div className="flex items-end">
+            <button className="btn btn-secondary w-full" type="submit">Save person type</button>
+          </div>
+        </form>
+
+        {user.profile_type === "attendance_only" ? (
+          <details className="mt-5 rounded-2xl border border-[var(--rcg-border)] bg-[var(--rcg-green-mist)] p-4">
+            <summary className="cursor-pointer font-black text-[var(--rcg-green-dark)]">Promote to registered account…</summary>
+            <p className="mt-2 text-sm text-[var(--rcg-muted)]">Use this when a one-off volunteer becomes a regular volunteer or employee. Existing attendance stays attached to this person.</p>
+            <form action={promoteAttendancePerson} className="mt-4 grid gap-3 md:grid-cols-2">
+              <input type="hidden" name="profileId" value={id} />
+              <div><label className="mb-1 block text-sm font-extrabold">Email</label><input className="input" name="email" type="email" required /></div>
+              <div><label className="mb-1 block text-sm font-extrabold">Temporary password</label><input className="input" name="password" type="password" minLength={10} required /></div>
+              <div><label className="mb-1 block text-sm font-extrabold">Registered type</label><select className="input" name="attendanceCategory" defaultValue="regular_volunteer"><option value="regular_volunteer">Regular volunteer</option><option value="employee">Employee</option><option value="registered">Registered person</option><option value="other">Other</option></select></div>
+              <div className="flex items-end"><button className="btn btn-primary w-full" type="submit">Create account & keep history</button></div>
+            </form>
+          </details>
+        ) : null}
+      </section>
 
       <section className="card p-5 sm:p-6">
         <div className="mb-5">

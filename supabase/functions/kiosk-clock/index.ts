@@ -15,6 +15,36 @@ function json(body: Record<string, unknown>, status = 200) {
   });
 }
 
+async function sha256Hex(value: string) {
+  const data = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function validateDevice(
+  supabase: ReturnType<typeof createClient>,
+  deviceId: string,
+  deviceToken: string,
+) {
+  if (!deviceId || !deviceToken) return null;
+  const tokenHash = await sha256Hex(deviceToken);
+
+  const { data: device } = await supabase
+    .from("kiosk_devices")
+    .select("id,label,is_active,token_hash")
+    .eq("id", deviceId)
+    .maybeSingle();
+
+  if (!device || !device.is_active || device.token_hash !== tokenHash) return null;
+
+  await supabase
+    .from("kiosk_devices")
+    .update({ last_seen_at: new Date().toISOString() })
+    .eq("id", device.id);
+
+  return device;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Method not allowed." }, 405);
@@ -27,11 +57,35 @@ Deno.serve(async (req) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  let body: { identifier?: string; pin?: string };
+  let body: {
+    action?: string;
+    device_id?: string;
+    device_token?: string;
+    identifier?: string;
+    pin?: string;
+  };
   try {
     body = await req.json();
   } catch {
     return json({ error: "Invalid request." }, 400);
+  }
+
+  const device = await validateDevice(
+    supabase,
+    String(body.device_id ?? ""),
+    String(body.device_token ?? ""),
+  );
+
+  if (!device) {
+    return json({ error: "This device is not registered as an active RCG kiosk." }, 403);
+  }
+
+  if (body.action === "device_status") {
+    return json({
+      success: true,
+      device_id: device.id,
+      device_label: device.label,
+    });
   }
 
   const identifier = String(body.identifier ?? "").trim();
@@ -43,8 +97,9 @@ Deno.serve(async (req) => {
 
   let profileQuery = supabase
     .from("profiles")
-    .select("id,full_name,email,short_code,is_active,archived_at,can_use_kiosk")
-    .eq("short_code", identifier)
+    .select("id,full_name,email,short_code,profile_type,is_active,archived_at,can_use_kiosk")
+    .ilike("short_code", identifier)
+    .eq("profile_type", "account")
     .maybeSingle();
 
   let { data: profile } = await profileQuery;
@@ -52,8 +107,9 @@ Deno.serve(async (req) => {
   if (!profile && identifier.includes("@")) {
     const response = await supabase
       .from("profiles")
-      .select("id,full_name,email,short_code,is_active,archived_at,can_use_kiosk")
+      .select("id,full_name,email,short_code,profile_type,is_active,archived_at,can_use_kiosk")
       .ilike("email", identifier)
+      .eq("profile_type", "account")
       .maybeSingle();
     profile = response.data;
   }
@@ -63,9 +119,11 @@ Deno.serve(async (req) => {
       entered_identifier: identifier,
       resolved_profile_id: profile?.id ?? null,
       event_type: "pin_failure",
-      metadata: { reason: "unavailable_profile" },
+      device_label: device.label,
+      kiosk_device_id: device.id,
+      metadata: { reason: "unavailable_profile", source: "trusted_kiosk" },
     });
-    return json({ error: "Details not recognised." }, 401);
+    return json({ error: "Details not recognised or kiosk access is disabled." }, 401);
   }
 
   const { data: credential } = await supabase
@@ -96,7 +154,9 @@ Deno.serve(async (req) => {
         entered_identifier: identifier,
         resolved_profile_id: profile.id,
         event_type: "pin_failure",
-        metadata: { attempts, locked: Boolean(lock) },
+        device_label: device.label,
+        kiosk_device_id: device.id,
+        metadata: { attempts, locked: Boolean(lock), source: "trusted_kiosk" },
       }),
     ]);
 
@@ -156,8 +216,16 @@ Deno.serve(async (req) => {
     entered_identifier: identifier,
     resolved_profile_id: profile.id,
     event_type: action,
-    metadata: { source: "kiosk-clock", on_site_verified: action === "clock_in" },
+    device_label: device.label,
+    kiosk_device_id: device.id,
+    metadata: { source: "trusted_kiosk", on_site_verified: action === "clock_in" },
   });
 
-  return json({ success: true, action, full_name: profile.full_name, at: now });
+  return json({
+    success: true,
+    action,
+    full_name: profile.full_name,
+    at: now,
+    device_label: device.label,
+  });
 });

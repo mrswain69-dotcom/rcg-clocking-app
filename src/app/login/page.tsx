@@ -8,9 +8,9 @@ export const metadata: Metadata = { title: "Sign in" };
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; message?: string }>;
+  searchParams: Promise<{ error?: string; message?: string; next?: string }>;
 }) {
-  const { error, message } = await searchParams;
+  const { error, message, next } = await searchParams;
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">
@@ -29,6 +29,7 @@ export default async function LoginPage({
         {message ? <p className="mb-5 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">{message}</p> : null}
 
         <form action={login} className="space-y-4">
+          {next ? <input type="hidden" name="next" value={next} /> : null}
           <div>
             <label htmlFor="email" className="mb-1 block text-sm font-extrabold">Email address</label>
             <input className="input" id="email" name="email" type="email" autoComplete="email" required />

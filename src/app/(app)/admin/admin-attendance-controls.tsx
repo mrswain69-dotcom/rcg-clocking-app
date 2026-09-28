@@ -9,6 +9,8 @@ type PersonOption = {
   id: string;
   full_name: string;
   profile_type: string;
+  attendance_category: string;
+  organisation: string | null;
 };
 
 type OpenSessionOption = {
@@ -17,6 +19,8 @@ type OpenSessionOption = {
   full_name: string;
   clock_in_at: string;
   profile_type: string;
+  attendance_category: string;
+  organisation: string | null;
 };
 
 export function AdminAttendanceControls({
@@ -52,7 +56,9 @@ export function AdminAttendanceControls({
                 <option value="" disabled>Select person…</option>
                 {people.map((person) => (
                   <option key={person.id} value={person.id}>
-                    {person.full_name}{person.profile_type === "attendance_only" ? " · attendance only" : ""}
+                    {person.full_name}
+                    {" · " + person.attendance_category.replaceAll("_", " ")}
+                    {person.organisation ? " · " + person.organisation : ""}
                   </option>
                 ))}
               </select>
@@ -74,14 +80,26 @@ export function AdminAttendanceControls({
         </details>
 
         <details className="rounded-2xl border border-[var(--rcg-border)] bg-white p-4">
-          <summary className="cursor-pointer font-black text-[var(--rcg-green-dark)]">Visitor / no app login</summary>
+          <summary className="cursor-pointer font-black text-[var(--rcg-green-dark)]">New visitor / one-off volunteer</summary>
           <p className="mt-2 text-sm text-[var(--rcg-muted)]">
-            Creates an attendance-only person with no sign-in, kiosk access or app notifications.
+            Creates an attendance-only person with no sign-in. Volunteer records count toward volunteer hours; visitors are presence-only.
           </p>
           <form action={adminCreateAttendancePersonSession} className="mt-4 space-y-3">
             <div>
               <label className="mb-1 block text-sm font-extrabold" htmlFor="visitor-name">Name</label>
               <input className="input" id="visitor-name" name="fullName" maxLength={120} required />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-extrabold" htmlFor="visitor-type">Type</label>
+              <select className="input" id="visitor-type" name="attendanceCategory" defaultValue="visitor">
+                <option value="visitor">Visitor / meeting / media / contractor</option>
+                <option value="one_off_volunteer">One-off / corporate / course volunteer</option>
+                <option value="other">Other attendance-only person</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-extrabold" htmlFor="visitor-organisation">Organisation <span className="font-normal text-[var(--rcg-muted)]">(optional)</span></label>
+              <input className="input" id="visitor-organisation" name="organisation" maxLength={160} placeholder="Company, course or organisation" />
             </div>
             <div>
               <label className="mb-1 block text-sm font-extrabold" htmlFor="visitor-in">Clock in</label>
@@ -112,7 +130,9 @@ export function AdminAttendanceControls({
                   <option value="" disabled>Select person…</option>
                   {openSessions.map((session) => (
                     <option key={session.session_id} value={session.session_id}>
-                      {session.full_name}{session.profile_type === "attendance_only" ? " · attendance only" : ""}
+                      {session.full_name}
+                      {" · " + session.attendance_category.replaceAll("_", " ")}
+                      {session.organisation ? " · " + session.organisation : ""}
                     </option>
                   ))}
                 </select>
