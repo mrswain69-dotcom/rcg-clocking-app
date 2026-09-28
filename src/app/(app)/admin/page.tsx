@@ -26,6 +26,7 @@ export default async function AdminPage() {
     { href: "/admin/users", icon: "👥", title: "Users", copy: "Create accounts, manage roles, kiosk access and archive status." },
     { href: "/admin/reports", icon: "▤", title: "Reports", copy: "Review attendance, total hours and export CSV reports." },
     { href: "/admin/alerts", icon: "✉", title: "After-hours safety", copy: "Set closing time, recipients and safety email behaviour." },
+    { href: "/admin/kiosk-devices", icon: "▣", title: "Kiosk devices", copy: "Enrol, rename and revoke trusted RCG kiosk devices." },
     { href: "/admin/audit", icon: "✓", title: "Audit log", copy: "Review sensitive administrative and attendance changes." },
   ];
 
@@ -37,7 +38,7 @@ export default async function AdminPage() {
         description="Site safety, people management, reporting and operational controls in one place."
       />
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         {tools.map((tool) => (
           <Link key={tool.href} href={tool.href} className="card group block p-5 no-underline transition hover:-translate-y-1 hover:border-[var(--rcg-green)]/40 hover:shadow-lg">
             <div className="mb-4 text-3xl" aria-hidden="true">{tool.icon}</div>
