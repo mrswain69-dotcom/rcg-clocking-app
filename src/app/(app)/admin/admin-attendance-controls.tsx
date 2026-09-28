@@ -9,6 +9,8 @@ type PersonOption = {
   id: string;
   full_name: string;
   profile_type: string;
+  attendance_category: string;
+  organisation: string | null;
 };
 
 type OpenSessionOption = {
@@ -17,6 +19,8 @@ type OpenSessionOption = {
   full_name: string;
   clock_in_at: string;
   profile_type: string;
+  attendance_category: string;
+  organisation: string | null;
 };
 
 export function AdminAttendanceControls({
@@ -52,7 +56,9 @@ export function AdminAttendanceControls({
                 <option value="" disabled>Select person…</option>
                 {people.map((person) => (
                   <option key={person.id} value={person.id}>
-                    {person.full_name}{person.profile_type === "attendance_only" ? " · attendance only" : ""}
+                    {person.full_name}
+                    {" · " + person.attendance_category.replaceAll("_", " ")}
+                    {person.organisation ? " · " + person.organisation : ""}
                   </option>
                 ))}
               </select>
@@ -124,7 +130,9 @@ export function AdminAttendanceControls({
                   <option value="" disabled>Select person…</option>
                   {openSessions.map((session) => (
                     <option key={session.session_id} value={session.session_id}>
-                      {session.full_name}{session.profile_type === "attendance_only" ? " · attendance only" : ""}
+                      {session.full_name}
+                      {" · " + session.attendance_category.replaceAll("_", " ")}
+                      {session.organisation ? " · " + session.organisation : ""}
                     </option>
                   ))}
                 </select>
