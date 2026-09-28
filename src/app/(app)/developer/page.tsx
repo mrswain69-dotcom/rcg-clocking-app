@@ -20,7 +20,7 @@ export default async function DeveloperPage() {
     supabase.from("settings").select("site_name,timezone,closing_time,alert_enabled,alert_grace_minutes,alert_repeat_minutes,last_alert_sent_at,site_geofence_radius_m,site_location_accuracy_limit_m").limit(1).maybeSingle(),
     supabase
       .from("sessions")
-      .select("id,profile_id,clock_in_at,clock_out_at,clock_in_location_status,clock_in_distance_m,clock_in_accuracy_m,first_on_site_verified_at,last_presence_check_at")
+      .select("id,profile_id,clock_in_at,clock_out_at,clock_in_method,clock_in_location_status,clock_in_distance_m,clock_in_accuracy_m,first_on_site_verified_at,last_presence_check_at")
       .order("clock_in_at", { ascending: false })
       .limit(20),
   ]);
