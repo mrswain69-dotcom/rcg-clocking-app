@@ -11,6 +11,8 @@ type OnSiteRow = {
   full_name: string;
   role: string;
   profile_type: "account" | "attendance_only";
+  attendance_category: string;
+  organisation: string | null;
   clock_in_at: string;
   duration_minutes: number;
   clock_in_location_status: string;
@@ -47,7 +49,7 @@ function minutesBetween(start: string, end: string) {
 }
 
 function presenceCopy(row: OnSiteRow) {
-  if (row.current_presence_source?.startsWith("admin_override") || row.profile_type === "attendance_only") {
+  if (row.current_presence_source?.startsWith("admin_override")) {
     return {
       label: "Admin-entered attendance",
       detail: row.current_presence_status === "off_site"
@@ -265,7 +267,14 @@ export function OnSiteLive({
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <span className="badge">{row.role}</span>
-                      {row.profile_type === "attendance_only" ? <span className="badge !bg-slate-100 !text-slate-700">Attendance only</span> : null}
+                      <span className="badge !bg-slate-100 !text-slate-700">
+                        {row.attendance_category === "employee" ? "Employee"
+                          : row.attendance_category === "regular_volunteer" ? "Regular volunteer"
+                          : row.attendance_category === "one_off_volunteer" ? "One-off volunteer"
+                          : row.attendance_category === "visitor" ? "Visitor"
+                          : row.profile_type === "attendance_only" ? "Attendance only" : "Registered"}
+                      </span>
+                      {row.organisation ? <span className="badge !bg-blue-50 !text-blue-800">{row.organisation}</span> : null}
                     </div>
                   </div>
                   <span className="text-2xl" aria-hidden="true">
