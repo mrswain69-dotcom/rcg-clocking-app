@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
         last_presence_check_at: null,
         last_presence_distance_m: null,
         last_presence_accuracy_m: null,
-        current_presence_status: outIso ? "off_site" : "unverified",
+        current_presence_status: outIso ? "off_site" : "on_site",
         current_presence_status_at: outIso ?? inIso,
         current_presence_source: "admin_override",
       })
@@ -233,7 +233,7 @@ Deno.serve(async (req) => {
         last_presence_check_at: null,
         last_presence_distance_m: null,
         last_presence_accuracy_m: null,
-        current_presence_status: outIso ? "off_site" : "unverified",
+        current_presence_status: outIso ? "off_site" : "on_site",
         current_presence_status_at: outIso ?? inIso,
         current_presence_source: "admin_override",
       });
