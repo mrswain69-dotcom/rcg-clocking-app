@@ -214,9 +214,6 @@ export async function clockOut() {
     .update({
       clock_out_at: new Date().toISOString(),
       clock_out_method: "web",
-      current_presence_status: "off_site",
-      current_presence_status_at: new Date().toISOString(),
-      current_presence_source: "web_clock_out",
     })
     .eq("id", openSession.id)
     .eq("profile_id", profile.id)
