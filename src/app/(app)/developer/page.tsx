@@ -77,7 +77,7 @@ export default async function DeveloperPage() {
             <thead><tr><th>Clock in</th><th>User</th><th>Result</th><th>Evidence</th><th>First verified on site</th></tr></thead>
             <tbody>
               {locationSessions.length ? locationSessions.map((row) => {
-                const tone = locationEvidenceTone(row.clock_in_location_status);
+                const tone = locationEvidenceTone(row.clock_in_location_status, row.clock_in_method);
                 const badgeClass =
                   tone === "ok"
                     ? "!bg-green-100 !text-green-800"
@@ -88,7 +88,7 @@ export default async function DeveloperPage() {
                   <tr key={row.id}>
                     <td className="whitespace-nowrap">{formatUkDateTime(row.clock_in_at)}</td>
                     <td className="font-extrabold">{profileNames.get(row.profile_id) ?? "Unknown"}</td>
-                    <td><span className={`badge ${badgeClass}`}>{locationEvidenceLabel(row.clock_in_location_status)}</span></td>
+                    <td><span className={`badge ${badgeClass}`}>{locationEvidenceLabel(row.clock_in_location_status, row.clock_in_method)}</span></td>
                     <td className="max-w-md text-xs text-[var(--rcg-muted)]">{locationEvidenceDetail(row)}</td>
                     <td>{row.first_on_site_verified_at ? formatUkDateTime(row.first_on_site_verified_at) : "Not recorded"}</td>
                   </tr>
