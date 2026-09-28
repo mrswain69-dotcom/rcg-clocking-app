@@ -142,7 +142,8 @@ Deno.serve(async (req) => {
         profile_type: "account",
         attendance_category: attendanceCategory,
         short_code: shortCode ? shortCode.toUpperCase() : null,
-        can_use_kiosk: Boolean(pin),
+        can_use_kiosk: true,
+        kiosk_user_enabled: Boolean(pin),
       })
       .select("id")
       .single();
@@ -170,7 +171,7 @@ Deno.serve(async (req) => {
 
   const { data: target } = await admin
     .from("profiles")
-    .select("id,user_id,full_name,email,role,profile_type,attendance_category,organisation,is_active,archived_at,can_view_currently_on_site,can_use_kiosk")
+    .select("id,user_id,full_name,email,role,profile_type,attendance_category,organisation,is_active,archived_at,can_view_currently_on_site,can_use_kiosk,kiosk_user_enabled")
     .eq("id", targetId)
     .maybeSingle();
   if (!target) return reply({ error: "User not found." }, 404);
@@ -209,7 +210,8 @@ Deno.serve(async (req) => {
         email,
         profile_type: "account",
         attendance_category: attendanceCategory,
-        can_use_kiosk: false,
+        can_use_kiosk: true,
+        kiosk_user_enabled: false,
         archived_at: null,
         is_active: true,
       })
@@ -323,14 +325,21 @@ Deno.serve(async (req) => {
   if (action === "set_kiosk_access") {
     if (target.profile_type === "attendance_only") return reply({ error: "This setting is not available for attendance-only people." }, 400);
     const enabled = body.enabled === true;
-    const { error } = await admin.from("profiles").update({ can_use_kiosk: enabled }).eq("id", targetId);
+    const next = enabled
+      ? { can_use_kiosk: true }
+      : { can_use_kiosk: false, kiosk_user_enabled: false };
+    const { error } = await admin.from("profiles").update(next).eq("id", targetId);
     if (error) return reply({ error: "Unable to update kiosk access." }, 400);
-    await audit("kiosk_access_changed", targetId, { enabled });
+    await audit("kiosk_access_changed", targetId, {
+      allowed: enabled,
+      user_enabled_cleared: !enabled,
+    });
     return reply({ success: true });
   }
 
   if (action === "reset_pin") {
     if (target.profile_type === "attendance_only") return reply({ error: "This setting is not available for attendance-only people." }, 400);
+    if (!target.can_use_kiosk) return reply({ error: "Enable management kiosk permission before setting a PIN." }, 400);
     const pin = String(body.pin ?? "");
     if (!/^\d{4,6}$/.test(pin)) return reply({ error: "PIN must be 4–6 digits." }, 400);
     const pinHash = await bcrypt.hash(pin, 12);
@@ -342,7 +351,7 @@ Deno.serve(async (req) => {
       updated_at: new Date().toISOString(),
     });
     if (error) return reply({ error: "Unable to reset PIN." }, 400);
-    await admin.from("profiles").update({ can_use_kiosk: true }).eq("id", targetId);
+    await admin.from("profiles").update({ kiosk_user_enabled: true }).eq("id", targetId);
     await audit("pin_reset", targetId);
     return reply({ success: true });
   }

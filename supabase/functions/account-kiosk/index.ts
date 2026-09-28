@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
 
   const { data: profile } = await admin
     .from("profiles")
-    .select("id,user_id,email,full_name,profile_type,is_active,archived_at,can_use_kiosk,short_code")
+    .select("id,user_id,email,full_name,profile_type,is_active,archived_at,can_use_kiosk,kiosk_user_enabled,short_code")
     .eq("user_id", userData.user.id)
     .maybeSingle();
 
@@ -74,7 +74,8 @@ Deno.serve(async (req) => {
 
     return reply({
       success: true,
-      enabled: profile.can_use_kiosk,
+      allowed: profile.can_use_kiosk,
+      enabled: profile.can_use_kiosk && profile.kiosk_user_enabled,
       email: profile.email,
       short_code: profile.short_code,
       pin_set: Boolean(credential),
@@ -98,6 +99,10 @@ Deno.serve(async (req) => {
   }
 
   if (action === "set_credentials") {
+    if (!profile.can_use_kiosk) {
+      return reply({ error: "RCG has disabled kiosk access for this account. Ask an administrator if you need it restored." }, 403);
+    }
+
     const pin = String(body.pin ?? "");
     const requestedShortCode = normaliseShortCode(String(body.short_code ?? ""));
     const shortCode = requestedShortCode || null;
@@ -127,7 +132,7 @@ Deno.serve(async (req) => {
       .from("profiles")
       .update({
         short_code: shortCode,
-        can_use_kiosk: true,
+        kiosk_user_enabled: true,
       })
       .eq("id", profile.id);
 
@@ -157,7 +162,7 @@ Deno.serve(async (req) => {
   if (action === "disable") {
     const { error } = await admin
       .from("profiles")
-      .update({ can_use_kiosk: false })
+      .update({ kiosk_user_enabled: false })
       .eq("id", profile.id);
 
     if (error) return reply({ error: "Unable to disable kiosk access." }, 400);
