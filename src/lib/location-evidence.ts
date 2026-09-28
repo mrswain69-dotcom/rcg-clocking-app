@@ -1,4 +1,5 @@
 export type LocationEvidence = {
+  clock_in_method?: string | null;
   clock_in_location_status?: string | null;
   clock_in_distance_m?: number | null;
   clock_in_accuracy_m?: number | null;
@@ -13,7 +14,9 @@ export function formatDistanceMetres(metres?: number | null) {
   return `${metres} m`;
 }
 
-export function locationEvidenceLabel(status?: string | null) {
+export function locationEvidenceLabel(status?: string | null, method?: string | null) {
+  if (method === "admin_override") return "Admin entry · Not location verified";
+
   switch (status) {
     case "kiosk_verified":
       return "Verified on site · Kiosk";
@@ -31,13 +34,18 @@ export function locationEvidenceLabel(status?: string | null) {
   }
 }
 
-export function locationEvidenceTone(status?: string | null) {
+export function locationEvidenceTone(status?: string | null, method?: string | null) {
+  if (method === "admin_override") return "neutral" as const;
   if (status === "kiosk_verified" || status === "on_site_verified") return "ok" as const;
   if (status === "outside_site") return "warn" as const;
   return "neutral" as const;
 }
 
 export function locationEvidenceDetail(evidence: LocationEvidence) {
+  if (evidence.clock_in_method === "admin_override") {
+    return "Clock-in was entered by an administrator. No device location was collected or inferred.";
+  }
+
   const distance = formatDistanceMetres(evidence.clock_in_distance_m);
   const accuracy = evidence.clock_in_accuracy_m === null || evidence.clock_in_accuracy_m === undefined
     ? null

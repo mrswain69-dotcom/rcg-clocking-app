@@ -103,3 +103,16 @@ Keep production alerts disabled until the first five checks pass.
 - Vercel production deployment for `main` succeeds.
 - `https://rcgclocking.app` resolves and loads over HTTPS.
 - Supabase security advisor has no unexpected new high-severity findings.
+
+
+## Admin manual attendance
+
+- As an admin, add an open session for an existing user with a chosen clock-in date/time and a reason.
+- Confirm the person appears in the live site list and site headcount with **Admin-entered attendance / location not verified**.
+- Confirm the user's own History shows the session with grey/no location-verification status.
+- From the live card, clock the person out using a chosen date/time and reason; confirm the session closes at exactly that time.
+- Add a completed historical session by entering both clock-in and clock-out times in one action.
+- Create a **Visitor / no app login** attendance record and confirm the new person is marked **Attendance only**, has no kiosk/PIN/app access, and can be reused for later attendance.
+- Confirm an attendance-only open session is included in the site headcount but does not offer **Request presence check**.
+- Confirm the Audit log identifies the acting administrator, target person/session, reason and times for each manual action.
+- Confirm Reports and detailed CSV show the method as admin override and location as not verified.

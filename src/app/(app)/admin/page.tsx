@@ -3,13 +3,23 @@ import Link from "next/link";
 import { PageHeader } from "@/components/brand/PageHeader";
 import { requireAdminProfile } from "@/lib/auth";
 import { OnSiteLive } from "./on-site-live";
+import { AdminAttendanceControls } from "./admin-attendance-controls";
 
 export const metadata: Metadata = { title: "Admin" };
 
 export default async function AdminPage() {
   const { supabase, profile } = await requireAdminProfile();
-  const { data } = await supabase.from("current_on_site_view").select("*").order("clock_in_at", { ascending: true });
+  const [{ data }, { data: peopleData }] = await Promise.all([
+    supabase.from("current_on_site_view").select("*").order("clock_in_at", { ascending: true }),
+    supabase
+      .from("profiles")
+      .select("id,full_name,profile_type,is_active,archived_at")
+      .eq("is_active", true)
+      .is("archived_at", null)
+      .order("full_name"),
+  ]);
   const current = data ?? [];
+  const people = peopleData ?? [];
   const developerLike = ["owner", "developer"].includes(profile.role);
 
   const tools = [
@@ -46,6 +56,17 @@ export default async function AdminPage() {
           <span className="botanical-corner" aria-hidden="true" />
         </Link>
       ) : null}
+
+      <AdminAttendanceControls
+        people={people}
+        openSessions={current.map((row) => ({
+          session_id: row.session_id,
+          profile_id: row.profile_id,
+          full_name: row.full_name,
+          clock_in_at: row.clock_in_at,
+          profile_type: row.profile_type,
+        }))}
+      />
 
       <OnSiteLive initialRows={current} canRequestPresenceCheck />
     </div>

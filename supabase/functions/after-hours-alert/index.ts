@@ -27,7 +27,8 @@ type OpenSession = {
 type Profile = {
   id: string;
   full_name: string;
-  email: string;
+  email: string | null;
+  profile_type: "account" | "attendance_only";
 };
 
 type PresenceRequest = {
@@ -280,7 +281,7 @@ Deno.serve(async (req) => {
   const profileIds = [...new Set(sessions.map((session) => session.profile_id))];
   const { data: profilesData } = await admin
     .from("profiles")
-    .select("id,full_name,email")
+    .select("id,full_name,email,profile_type")
     .in("id", profileIds);
   const profiles = new Map(((profilesData ?? []) as Profile[]).map((profile) => [profile.id, profile]));
 
@@ -303,7 +304,7 @@ Deno.serve(async (req) => {
     for (const session of sessions) {
       if (unresolvedBySession.has(session.id)) continue;
       const profile = profiles.get(session.profile_id);
-      if (!profile) continue;
+      if (!profile || profile.profile_type === "attendance_only") continue;
 
       const { data: created, error } = await admin
         .from("presence_check_requests")
@@ -347,6 +348,8 @@ Deno.serve(async (req) => {
   }
 
   const escalationSessions = sessions.filter((session) => {
+    const profile = profiles.get(session.profile_id);
+    if (profile?.profile_type === "attendance_only") return true;
     if (!settings.presence_check_enabled) return true;
     const request = unresolvedBySession.get(session.id);
     if (!request) return false;
@@ -393,11 +396,13 @@ Deno.serve(async (req) => {
     const name = profile?.full_name ?? "Unknown user";
     const clockInLocal = localParts(new Date(session.clock_in_at), settings.timezone).display;
     const request = unresolvedBySession.get(session.id);
-    const checkState = settings.presence_check_enabled
-      ? request?.status === "location_unavailable"
-        ? "Location unavailable / unresolved"
-        : "Presence check sent – no response"
-      : "No automated presence check";
+    const checkState = profile?.profile_type === "attendance_only"
+      ? "Attendance-only record – management follow-up required"
+      : settings.presence_check_enabled
+        ? request?.status === "location_unavailable"
+          ? "Location unavailable / unresolved"
+          : "Presence check sent – no response"
+        : "No automated presence check";
     return `<tr><td style="padding:8px;border-bottom:1px solid #ddd"><strong>${htmlEscape(name)}</strong></td><td style="padding:8px;border-bottom:1px solid #ddd">${htmlEscape(clockInLocal)}</td><td style="padding:8px;border-bottom:1px solid #ddd">${htmlEscape(formatDuration(session.clock_in_at, now))}</td><td style="padding:8px;border-bottom:1px solid #ddd">${htmlEscape(checkState)}</td></tr>`;
   }).join("");
 
@@ -411,7 +416,7 @@ Deno.serve(async (req) => {
         <thead><tr><th style="text-align:left;padding:8px">Name</th><th style="text-align:left;padding:8px">Clocked in</th><th style="text-align:left;padding:8px">Duration</th><th style="text-align:left;padding:8px">Presence check</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
-      <p>The person was asked to confirm their status first. Please open the admin dashboard to request another check or contact them directly.</p>
+      <p>Where an app account is available, the person is asked to confirm their status first. Attendance-only records cannot receive an app presence request and require management follow-up. Please open the admin dashboard to review or clock the person out.</p>
       <p style="margin:28px 0"><a href="${htmlEscape(adminUrl)}" style="background:#315d3a;color:#fff;text-decoration:none;padding:12px 18px;border-radius:10px;font-weight:700">Open admin safety view</a></p>
       <p style="font-size:12px;color:#6d756d">Exact user locations are not disclosed; the system reports only on-site, off-site or unresolved status.</p>
     </div>`;

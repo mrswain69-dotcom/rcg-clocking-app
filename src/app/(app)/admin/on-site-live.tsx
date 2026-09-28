@@ -3,12 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { requestPresenceCheck } from "./presence-actions";
+import { adminClockOutSession } from "./manual-attendance-actions";
 
 type OnSiteRow = {
   session_id: string;
   profile_id: string;
   full_name: string;
   role: string;
+  profile_type: "account" | "attendance_only";
   clock_in_at: string;
   duration_minutes: number;
   clock_in_location_status: string;
@@ -45,6 +47,16 @@ function minutesBetween(start: string, end: string) {
 }
 
 function presenceCopy(row: OnSiteRow) {
+  if (row.current_presence_source?.startsWith("admin_override") || row.profile_type === "attendance_only") {
+    return {
+      label: "Admin-entered attendance",
+      detail: row.current_presence_status === "off_site"
+        ? "Clocked in by an administrator · currently recorded off site · no device location verification"
+        : "Clocked in by an administrator · location not verified",
+      tone: "neutral" as const,
+    };
+  }
+
   if (row.current_presence_status === "on_site") {
     if (row.current_presence_source === "user_confirmation") {
       return {
@@ -251,7 +263,10 @@ export function OnSiteLive({
                       <span className={`status-dot ${row.current_presence_status === "on_site" ? "active" : ""}`} />
                       <strong className="text-lg">{row.full_name}</strong>
                     </div>
-                    <span className="badge">{row.role}</span>
+                    <div className="flex flex-wrap gap-2">
+                      <span className="badge">{row.role}</span>
+                      {row.profile_type === "attendance_only" ? <span className="badge !bg-slate-100 !text-slate-700">Attendance only</span> : null}
+                    </div>
                   </div>
                   <span className="text-2xl" aria-hidden="true">
                     {row.current_presence_status === "on_site" ? "🌿" : row.current_presence_status === "off_site" ? "↗" : "?"}
@@ -290,12 +305,33 @@ export function OnSiteLive({
                 </dl>
 
                 {canRequestPresenceCheck ? (
-                  <form action={requestPresenceCheck} className="mt-5">
-                    <input type="hidden" name="sessionId" value={row.session_id} />
-                    <button className="btn btn-secondary w-full" type="submit">
-                      {checkPending ? "Send presence check again" : "Request presence check"}
-                    </button>
-                  </form>
+                  <div className="mt-5 space-y-3">
+                    {row.profile_type !== "attendance_only" ? (
+                      <form action={requestPresenceCheck}>
+                        <input type="hidden" name="sessionId" value={row.session_id} />
+                        <button className="btn btn-secondary w-full" type="submit">
+                          {checkPending ? "Send presence check again" : "Request presence check"}
+                        </button>
+                      </form>
+                    ) : null}
+
+                    <details className="rounded-xl border border-[var(--rcg-border)] bg-[var(--rcg-cream)] p-3">
+                      <summary className="cursor-pointer text-sm font-extrabold text-[var(--rcg-green-dark)]">Admin clock out…</summary>
+                      <form action={adminClockOutSession} className="mt-3 space-y-3">
+                        <input type="hidden" name="sessionId" value={row.session_id} />
+                        <input type="hidden" name="profileId" value={row.profile_id} />
+                        <div>
+                          <label className="mb-1 block text-xs font-extrabold uppercase tracking-wide text-[var(--rcg-muted)]">Actual date & time left</label>
+                          <input className="input !min-h-10" name="clockOutAt" type="datetime-local" required />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-xs font-extrabold uppercase tracking-wide text-[var(--rcg-muted)]">Reason</label>
+                          <input className="input !min-h-10" name="reason" placeholder="Forgot to clock out / kiosk unavailable" minLength={3} required />
+                        </div>
+                        <button className="btn btn-danger w-full !min-h-10" type="submit">Clock out at this time</button>
+                      </form>
+                    </details>
+                  </div>
                 ) : null}
               </article>
             );

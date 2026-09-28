@@ -33,7 +33,7 @@ export default async function AdminReportsPage({ searchParams }: PageProps) {
   const { supabase } = await requireAdminProfile();
   const { data: profilesData } = await supabase
     .from("profiles")
-    .select("id,full_name,email,is_active")
+    .select("id,full_name,email,profile_type,is_active")
     .order("full_name");
   const profiles = profilesData ?? [];
   const profileById = new Map(profiles.map((profile) => [profile.id, profile]));
@@ -56,8 +56,10 @@ export default async function AdminReportsPage({ searchParams }: PageProps) {
 
     return {
       id: session.id,
+      profile_id: session.profile_id,
       full_name: profile?.full_name ?? "Unknown user",
       email: profile?.email ?? "",
+      profile_type: profile?.profile_type ?? "account",
       clock_in_at: session.clock_in_at,
       clock_out_at: session.clock_out_at,
       clock_in_method: session.clock_in_method,
@@ -70,18 +72,25 @@ export default async function AdminReportsPage({ searchParams }: PageProps) {
       first_on_site_verified_at: session.first_on_site_verified_at,
       first_on_site_verification_method: session.first_on_site_verification_method,
       last_presence_check_at: session.last_presence_check_at,
-      location_label: locationEvidenceLabel(session.clock_in_location_status),
+      location_label: locationEvidenceLabel(session.clock_in_location_status, session.clock_in_method),
       location_detail: locationEvidenceDetail(session),
       arrival_delay_minutes: arrivalDelay,
     };
   });
 
-  const summaryMap = new Map<string, { full_name: string; email: string; visits: number; hours: number }>();
+  const summaryMap = new Map<string, { profile_id: string; full_name: string; email: string; profile_type: string; visits: number; hours: number }>();
   for (const row of rows) {
-    const current = summaryMap.get(row.email) ?? { full_name: row.full_name, email: row.email, visits: 0, hours: 0 };
+    const current = summaryMap.get(row.profile_id) ?? {
+      profile_id: row.profile_id,
+      full_name: row.full_name,
+      email: row.email,
+      profile_type: row.profile_type,
+      visits: 0,
+      hours: 0,
+    };
     current.visits += 1;
     current.hours += row.hours;
-    summaryMap.set(row.email, current);
+    summaryMap.set(row.profile_id, current);
   }
 
   const summary = [...summaryMap.values()].sort((a, b) => a.full_name.localeCompare(b.full_name));
@@ -120,7 +129,7 @@ export default async function AdminReportsPage({ searchParams }: PageProps) {
           <div><p className="section-kicker">Summary</p><h2 className="text-2xl font-black">People & hours</h2></div>
           <ReportExports rows={rows} summary={summary} from={from} to={to} />
         </div>
-        <div className="mt-4 table-wrap"><table><thead><tr><th>User</th><th>Visits</th><th>Hours</th></tr></thead><tbody>{summary.length ? summary.map((row) => <tr key={row.email}><td><strong>{row.full_name}</strong><div className="text-xs text-[var(--rcg-muted)]">{row.email}</div></td><td>{row.visits}</td><td className="font-extrabold">{formatHoursMinutes(row.hours)}</td></tr>) : <tr><td colSpan={3} className="text-[var(--rcg-muted)]">No attendance in this date range.</td></tr>}</tbody></table></div>
+        <div className="mt-4 table-wrap"><table><thead><tr><th>User</th><th>Visits</th><th>Hours</th></tr></thead><tbody>{summary.length ? summary.map((row) => <tr key={row.profile_id}><td><strong>{row.full_name}</strong><div className="text-xs text-[var(--rcg-muted)]">{row.profile_type === "attendance_only" ? "Attendance only · no login" : row.email}</div></td><td>{row.visits}</td><td className="font-extrabold">{formatHoursMinutes(row.hours)}</td></tr>) : <tr><td colSpan={3} className="text-[var(--rcg-muted)]">No attendance in this date range.</td></tr>}</tbody></table></div>
       </section>
 
       <section className="card p-5 sm:p-6">
@@ -146,7 +155,7 @@ export default async function AdminReportsPage({ searchParams }: PageProps) {
             </thead>
             <tbody>
               {rows.length ? rows.map((row) => {
-                const tone = locationEvidenceTone(row.clock_in_location_status);
+                const tone = locationEvidenceTone(row.clock_in_location_status, row.clock_in_method);
                 const badgeClass =
                   tone === "ok"
                     ? "!bg-green-100 !text-green-800"
