@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { MetricCard } from "@/components/brand/MetricCard";
 import { PageHeader } from "@/components/brand/PageHeader";
+import { OnSiteVerificationIndicator } from "@/components/on-site-verification-indicator";
 import { requireProfile } from "@/lib/auth";
 import { durationHours, formatHoursMinutes, formatUkDateTime } from "@/lib/dates";
 import { HistoryExport } from "./history-client";
@@ -31,7 +32,7 @@ export default async function HistoryPage({ searchParams }: PageProps) {
   const { supabase, profile } = await requireProfile();
   const { data } = await supabase
     .from("sessions")
-    .select("id,clock_in_at,clock_out_at,clock_in_method,clock_out_method")
+    .select("id,clock_in_at,clock_out_at,clock_in_method,clock_out_method,clock_in_location_status,first_on_site_verified_at")
     .eq("profile_id", profile.id)
     .gte("clock_in_at", `${from}T00:00:00.000Z`)
     .lte("clock_in_at", `${to}T23:59:59.999Z`)
@@ -87,7 +88,7 @@ export default async function HistoryPage({ searchParams }: PageProps) {
         {sessions.length ? (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Clock in</th><th>Clock out</th><th>Duration</th><th>Method</th></tr></thead>
+              <thead><tr><th>Clock in</th><th>Clock out</th><th>Duration</th><th>Method</th><th className="text-center">On site</th></tr></thead>
               <tbody>
                 {sessions.map((session) => (
                   <tr key={session.id}>
@@ -95,6 +96,12 @@ export default async function HistoryPage({ searchParams }: PageProps) {
                     <td>{formatUkDateTime(session.clock_out_at)}</td>
                     <td className="font-extrabold">{formatHoursMinutes(durationHours(session.clock_in_at, session.clock_out_at))}</td>
                     <td><span className="badge">{session.clock_in_method}</span></td>
+                    <td className="text-center">
+                      <OnSiteVerificationIndicator
+                        clockInLocationStatus={session.clock_in_location_status}
+                        firstOnSiteVerifiedAt={session.first_on_site_verified_at}
+                      />
+                    </td>
                   </tr>
                 ))}
               </tbody>
