@@ -144,12 +144,16 @@ Deno.serve(async (req) => {
 
   const { data: profile } = await admin
     .from("profiles")
-    .select("id,full_name,email,is_active,archived_at")
+    .select("id,full_name,email,profile_type,is_active,archived_at")
     .eq("id", session.profile_id)
     .maybeSingle();
 
   if (!profile || !profile.is_active || profile.archived_at) {
     return reply({ error: "The user is not available for a presence check." }, 404);
+  }
+
+  if (profile.profile_type === "attendance_only") {
+    return reply({ error: "Attendance-only people cannot receive app presence checks. Use management follow-up or manual clock-out." }, 400);
   }
 
   const now = new Date().toISOString();
