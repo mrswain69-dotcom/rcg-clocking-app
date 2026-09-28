@@ -86,7 +86,7 @@ h1, h2, h3 { letter-spacing: -.025em; }
   right: .65rem;
   bottom: .65rem;
   z-index: 45;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   border: 1px solid var(--rcg-border);
   border-radius: 1.2rem;
   background: rgba(255,255,255,.96);
@@ -94,9 +94,87 @@ h1, h2, h3 { letter-spacing: -.025em; }
   backdrop-filter: blur(16px);
   padding: .45rem;
 }
-.mobile-nav a { display: flex; min-height: 3.35rem; flex-direction: column; align-items: center; justify-content: center; gap: .15rem; border-radius: .85rem; color: var(--rcg-text); text-decoration: none; font-size: .68rem; font-weight: 850; }
-.mobile-nav a:hover { background: var(--rcg-green-soft); color: var(--rcg-green-dark); }
+.mobile-nav > * { min-width: 0; }
+.mobile-nav a,
+.mobile-more summary {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: 3.35rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .15rem;
+  border-radius: .85rem;
+  color: var(--rcg-text);
+  text-decoration: none;
+  font-size: .68rem;
+  font-weight: 850;
+}
+.mobile-nav a:hover,
+.mobile-more summary:hover { background: var(--rcg-green-soft); color: var(--rcg-green-dark); }
 .mobile-nav-icon { font-size: 1.15rem; line-height: 1; }
+.mobile-more { position: relative; min-width: 0; }
+.mobile-more summary { cursor: pointer; list-style: none; }
+.mobile-more summary::-webkit-details-marker { display: none; }
+.mobile-more-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + .75rem);
+  width: min(18rem, calc(100vw - 1.3rem));
+  max-height: min(68vh, 34rem);
+  overflow-y: auto;
+  border: 1px solid var(--rcg-border);
+  border-radius: 1rem;
+  background: rgba(255,255,255,.985);
+  padding: .55rem;
+  box-shadow: 0 18px 45px rgba(34,45,34,.2);
+}
+.mobile-more-menu a {
+  min-height: 2.85rem;
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: .65rem;
+  padding: .65rem .75rem;
+  font-size: .78rem;
+}
+.mobile-more-heading {
+  padding: .6rem .75rem .25rem;
+  color: var(--rcg-muted);
+  font-size: .68rem;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.presence-tech-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .85rem;
+  margin-bottom: 1rem;
+  border: 1px solid #efd995;
+  border-radius: 1rem;
+  background: #fff9e8;
+  padding: .8rem .9rem;
+  box-shadow: 0 6px 16px rgba(90,70,20,.06);
+}
+.presence-tech-copy { min-width: 0; }
+.presence-tech-heading { display: flex; align-items: center; gap: .45rem; color: #713b12; font-size: .88rem; }
+.presence-tech-dot {
+  display: inline-grid;
+  width: 1.35rem;
+  height: 1.35rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 999px;
+  background: #d99a19;
+  color: #fff;
+  font-size: .75rem;
+  font-weight: 950;
+}
+.presence-tech-copy p { margin-top: .18rem; color: #80511f; font-size: .78rem; line-height: 1.4; }
+.presence-tech-retry { min-height: 2.45rem; flex: 0 0 auto; padding: .5rem .75rem; font-size: .78rem; }
 
 .section-kicker { color: var(--rcg-green-dark); font-size: .77rem; font-weight: 900; letter-spacing: .16em; text-transform: uppercase; }
 .page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-bottom: 1.55rem; }
@@ -309,7 +387,15 @@ tbody tr:hover { background: rgba(232,244,233,.34); }
   .desktop-nav { margin-left: auto; }
   .desktop-nav form { display: block; }
   .desktop-nav .btn { min-height: 2.55rem; padding: .55rem .75rem; }
-  .mobile-nav { display: grid; }
+  .mobile-nav {
+    display: grid;
+    left: max(.55rem, env(safe-area-inset-left));
+    right: max(.55rem, env(safe-area-inset-right));
+    width: auto;
+    max-width: calc(100vw - 1.1rem);
+  }
+  .presence-tech-notice { align-items: flex-start; gap: .65rem; padding: .7rem .75rem; }
+  .presence-tech-retry { align-self: center; }
   .app-main { padding-block: 1.2rem 6.25rem; }
   .page-header { align-items: flex-start; flex-direction: column; }
   .page-header-action { width: 100%; }
@@ -326,6 +412,8 @@ tbody tr:hover { background: rgba(232,244,233,.34); }
 }
 
 @media (max-width: 480px) {
+  .presence-tech-notice { flex-direction: column; }
+  .presence-tech-retry { width: 100%; }
   .dashboard-hero { min-height: 6rem; border-radius: 1.1rem; }
   .dashboard-greeting h1 { font-size: 2.25rem; }
   .status-title { font-size: 2rem; }

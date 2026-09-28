@@ -172,25 +172,26 @@ export function PresenceAutoVerifier({
   if (!showTechnicalNotice) return null;
 
   return (
-    <section className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-sm font-black text-amber-950">On-site verification pending</p>
-          <p className="mt-1 text-sm leading-6 text-amber-900">
-            {permissionProblem
-              ? "The app cannot currently get a usable location from this device. Check that Location and Precise location are allowed, then retry."
-              : `Your phone is currently providing approximate location${latestAccuracy !== null ? ` (${formatAccuracy(latestAccuracy)})` : ""}, so the app cannot reliably confirm that you're at RCG. Enable Precise location, then retry.`}
-          </p>
+    <section className="presence-tech-notice" aria-live="polite">
+      <div className="presence-tech-copy">
+        <div className="presence-tech-heading">
+          <span className="presence-tech-dot" aria-hidden="true">!</span>
+          <strong>On-site verification pending</strong>
         </div>
-        <button
-          className="btn btn-secondary shrink-0"
-          type="button"
-          onClick={() => void retryNow()}
-          disabled={retrying}
-        >
-          {retrying ? "Checking…" : "Try location again"}
-        </button>
+        <p>
+          {permissionProblem
+            ? "Location is unavailable. Allow Location and Precise location, then retry."
+            : `Location is only approximate${latestAccuracy !== null ? ` (${formatAccuracy(latestAccuracy)})` : ""}, so RCG cannot be verified yet. Enable Precise location, then retry.`}
+        </p>
       </div>
+      <button
+        className="btn btn-secondary presence-tech-retry"
+        type="button"
+        onClick={() => void retryNow()}
+        disabled={retrying}
+      >
+        {retrying ? "Checking…" : "Try again"}
+      </button>
     </section>
   );
 }
