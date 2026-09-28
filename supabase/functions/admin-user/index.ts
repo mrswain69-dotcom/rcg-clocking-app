@@ -60,8 +60,14 @@ Deno.serve(async (req) => {
 
   if (action === "create_attendance_person") {
     const fullName = String(body.full_name ?? "").trim();
+    const attendanceCategory = String(body.attendance_category ?? "other");
+    const organisation = String(body.organisation ?? "").trim().slice(0, 160) || null;
+
     if (fullName.length < 2 || fullName.length > 120) {
       return reply({ error: "Enter a name between 2 and 120 characters." }, 400);
+    }
+    if (!["one_off_volunteer", "visitor", "other"].includes(attendanceCategory)) {
+      return reply({ error: "Choose a valid visitor/volunteer type." }, 400);
     }
 
     const { data: profile, error } = await admin
@@ -72,6 +78,8 @@ Deno.serve(async (req) => {
         full_name: fullName,
         role: "user",
         profile_type: "attendance_only",
+        attendance_category: attendanceCategory,
+        organisation,
         can_use_kiosk: false,
         can_view_currently_on_site: false,
         can_receive_safety_alerts: false,
@@ -86,6 +94,8 @@ Deno.serve(async (req) => {
     await audit("attendance_person_created", profile.id, {
       full_name: fullName,
       profile_type: "attendance_only",
+      attendance_category: attendanceCategory,
+      organisation,
     });
 
     return reply({ success: true, profile_id: profile.id });
@@ -96,6 +106,7 @@ Deno.serve(async (req) => {
     const email = String(body.email ?? "").trim().toLowerCase();
     const password = String(body.password ?? "");
     const requestedRole = String(body.role ?? "user") as Role;
+    const attendanceCategory = String(body.attendance_category ?? "registered");
     const role: Role = actor.role === "owner" && ["admin", "developer", "user"].includes(requestedRole)
       ? requestedRole
       : "user";
@@ -105,8 +116,11 @@ Deno.serve(async (req) => {
     if (!fullName || !email.includes("@") || password.length < 10) {
       return reply({ error: "Name, valid email and a temporary password of at least 10 characters are required." }, 400);
     }
-    if (shortCode && (shortCode.length < 3 || shortCode.length > 12)) {
-      return reply({ error: "Short code must be 3–12 characters." }, 400);
+    if (!["registered", "employee", "regular_volunteer", "other"].includes(attendanceCategory)) {
+      return reply({ error: "Choose a valid registered-person type." }, 400);
+    }
+    if (shortCode && !/^[A-Za-z0-9_-]{3,12}$/.test(shortCode)) {
+      return reply({ error: "Short code must be 3–12 letters, numbers, - or _." }, 400);
     }
     if (pin && !/^\d{4,6}$/.test(pin)) return reply({ error: "PIN must be 4–6 digits." }, 400);
 
@@ -125,8 +139,10 @@ Deno.serve(async (req) => {
         full_name: fullName,
         email,
         role,
-        short_code: shortCode,
-        can_use_kiosk: true,
+        profile_type: "account",
+        attendance_category: attendanceCategory,
+        short_code: shortCode ? shortCode.toUpperCase() : null,
+        can_use_kiosk: Boolean(pin),
       })
       .select("id")
       .single();
@@ -141,7 +157,12 @@ Deno.serve(async (req) => {
       await admin.from("pin_credentials").upsert({ profile_id: profile.id, pin_hash: pinHash, failed_attempts: 0, locked_until: null });
     }
 
-    await audit("user_created", profile.id, { role, short_code_set: Boolean(shortCode), kiosk_pin_set: Boolean(pin) });
+    await audit("user_created", profile.id, {
+      role,
+      attendance_category: attendanceCategory,
+      short_code_set: Boolean(shortCode),
+      kiosk_pin_set: Boolean(pin),
+    });
     return reply({ success: true, profile_id: profile.id });
   }
 
@@ -149,10 +170,93 @@ Deno.serve(async (req) => {
 
   const { data: target } = await admin
     .from("profiles")
-    .select("id,user_id,full_name,email,role,profile_type,is_active,archived_at,can_view_currently_on_site,can_use_kiosk")
+    .select("id,user_id,full_name,email,role,profile_type,attendance_category,organisation,is_active,archived_at,can_view_currently_on_site,can_use_kiosk")
     .eq("id", targetId)
     .maybeSingle();
   if (!target) return reply({ error: "User not found." }, 404);
+
+  if (action === "promote_attendance_person") {
+    if (target.profile_type !== "attendance_only") {
+      return reply({ error: "Only attendance-only people can be converted to registered accounts." }, 400);
+    }
+
+    const email = String(body.email ?? "").trim().toLowerCase();
+    const password = String(body.password ?? "");
+    const attendanceCategory = String(body.attendance_category ?? "regular_volunteer");
+
+    if (!email.includes("@") || password.length < 10) {
+      return reply({ error: "Valid email and temporary password of at least 10 characters are required." }, 400);
+    }
+    if (!["registered", "employee", "regular_volunteer", "other"].includes(attendanceCategory)) {
+      return reply({ error: "Choose a valid registered-person type." }, 400);
+    }
+
+    const { data: created, error: createError } = await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { full_name: target.full_name },
+    });
+
+    if (createError || !created.user) {
+      return reply({ error: "Unable to create the sign-in account. The email may already be in use." }, 400);
+    }
+
+    const { error: updateError } = await admin
+      .from("profiles")
+      .update({
+        user_id: created.user.id,
+        email,
+        profile_type: "account",
+        attendance_category: attendanceCategory,
+        can_use_kiosk: false,
+        archived_at: null,
+        is_active: true,
+      })
+      .eq("id", target.id);
+
+    if (updateError) {
+      await admin.auth.admin.deleteUser(created.user.id);
+      return reply({ error: "Unable to convert this person to a registered account." }, 400);
+    }
+
+    await audit("attendance_person_promoted", target.id, {
+      from_profile_type: "attendance_only",
+      to_profile_type: "account",
+      attendance_category: attendanceCategory,
+      email,
+    });
+
+    return reply({ success: true });
+  }
+
+  if (action === "set_attendance_category") {
+    const category = String(body.attendance_category ?? "");
+    const allowed = target.profile_type === "account"
+      ? ["registered", "employee", "regular_volunteer", "other"]
+      : ["one_off_volunteer", "visitor", "other"];
+
+    if (!allowed.includes(category)) return reply({ error: "Invalid attendance category for this person." }, 400);
+
+    const organisation = target.profile_type === "attendance_only"
+      ? (String(body.organisation ?? "").trim().slice(0, 160) || null)
+      : target.organisation;
+
+    const { error } = await admin
+      .from("profiles")
+      .update({ attendance_category: category, organisation })
+      .eq("id", target.id);
+
+    if (error) return reply({ error: "Unable to update person type." }, 400);
+
+    await audit("attendance_category_changed", target.id, {
+      from: target.attendance_category,
+      to: category,
+      organisation,
+    });
+
+    return reply({ success: true });
+  }
 
   if (action === "delete_user") {
     if (actor.role !== "owner") return reply({ error: "Only the owner can permanently delete users." }, 403);
@@ -238,6 +342,7 @@ Deno.serve(async (req) => {
       updated_at: new Date().toISOString(),
     });
     if (error) return reply({ error: "Unable to reset PIN." }, 400);
+    await admin.from("profiles").update({ can_use_kiosk: true }).eq("id", targetId);
     await audit("pin_reset", targetId);
     return reply({ success: true });
   }
