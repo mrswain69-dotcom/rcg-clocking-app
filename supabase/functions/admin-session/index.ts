@@ -210,7 +210,9 @@ Deno.serve(async (req) => {
 
     const inIso = new Date(clockInAt).toISOString();
     const outIso = clockOutAt ? new Date(clockOutAt).toISOString() : null;
-    const clockInChanged = Math.abs(new Date(inIso).getTime() - new Date(existing.clock_in_at).getTime()) > 1000;
+    const clockInChanged =
+      new Date(inIso).toISOString().slice(0, 16)
+      !== new Date(existing.clock_in_at).toISOString().slice(0, 16);
 
     const next: Record<string, unknown> = {
       clock_in_at: inIso,
