@@ -30,6 +30,7 @@ The approved architecture and database/security documents in `/docs` remain the 
 - Location-aware clock-in evidence with on-site/off-site/unverified presence separated from working hours
 - Actionable after-hours presence checks with Web Push, email fallback, corrected leave time and management escalation
 - Admin-requested presence checks from the live safety view
+- Audited admin clock-in/out with exact dates/times, historical backfill and attendance-only visitor records
 - Five-minute Supabase Cron checker with Vault-backed scheduler authentication
 - Audit log and developer diagnostics/event viewer
 - Global operational settings for site name/timezone
