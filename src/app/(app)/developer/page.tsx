@@ -4,31 +4,44 @@ import { MetricCard } from "@/components/brand/MetricCard";
 import { PageHeader } from "@/components/brand/PageHeader";
 import { requireDeveloperProfile } from "@/lib/auth";
 import { formatUkDateTime } from "@/lib/dates";
+import { locationEvidenceDetail, locationEvidenceLabel, locationEvidenceTone } from "@/lib/location-evidence";
 
 export const metadata: Metadata = { title: "Developer diagnostics" };
 
 export default async function DeveloperPage() {
   const { supabase } = await requireDeveloperProfile();
 
-  const [profilesResult, sessionsResult, openResult, auditResult, kioskResult, settingsResult] = await Promise.all([
+  const [profilesResult, sessionsResult, openResult, auditResult, kioskResult, settingsResult, locationResult] = await Promise.all([
     supabase.from("profiles").select("id", { count: "exact", head: true }),
     supabase.from("sessions").select("id", { count: "exact", head: true }),
     supabase.from("sessions").select("id", { count: "exact", head: true }).is("clock_out_at", null),
     supabase.from("audit_log").select("id,action,created_at,metadata").order("created_at", { ascending: false }).limit(20),
     supabase.from("kiosk_events").select("id,event_type,entered_identifier,device_label,created_at").order("created_at", { ascending: false }).limit(20),
-    supabase.from("settings").select("site_name,timezone,closing_time,alert_enabled,alert_grace_minutes,alert_repeat_minutes,last_alert_sent_at").limit(1).maybeSingle(),
+    supabase.from("settings").select("site_name,timezone,closing_time,alert_enabled,alert_grace_minutes,alert_repeat_minutes,last_alert_sent_at,site_geofence_radius_m,site_location_accuracy_limit_m").limit(1).maybeSingle(),
+    supabase
+      .from("sessions")
+      .select("id,profile_id,clock_in_at,clock_out_at,clock_in_location_status,clock_in_distance_m,clock_in_accuracy_m,first_on_site_verified_at,last_presence_check_at")
+      .order("clock_in_at", { ascending: false })
+      .limit(20),
   ]);
 
   const settings = settingsResult.data;
   const audit = auditResult.data ?? [];
   const kiosk = kioskResult.data ?? [];
+  const locationSessions = locationResult.data ?? [];
+
+  const profileIds = [...new Set(locationSessions.map((row) => row.profile_id))];
+  const { data: locationProfiles } = profileIds.length
+    ? await supabase.from("profiles").select("id,full_name").in("id", profileIds)
+    : { data: [] as { id: string; full_name: string }[] };
+  const profileNames = new Map((locationProfiles ?? []).map((profile) => [profile.id, profile.full_name]));
 
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="Technical support"
         title="Developer diagnostics"
-        description="Operational health, runtime configuration, audit activity and kiosk events for maintenance and support."
+        description="Operational health, runtime configuration, location capture diagnostics, audit activity and kiosk events."
         action={<Link className="btn btn-secondary" href="/admin">← Admin</Link>}
       />
 
@@ -48,6 +61,41 @@ export default async function DeveloperPage() {
           <p className="rounded-xl bg-white p-3 ring-1 ring-[var(--rcg-border)]"><strong>Grace</strong><br />{settings?.alert_grace_minutes ?? "—"} min</p>
           <p className="rounded-xl bg-white p-3 ring-1 ring-[var(--rcg-border)]"><strong>Repeat</strong><br />{settings?.alert_repeat_minutes ?? "—"} min</p>
           <p className="rounded-xl bg-white p-3 ring-1 ring-[var(--rcg-border)]"><strong>Last alert</strong><br />{formatUkDateTime(settings?.last_alert_sent_at)}</p>
+          <p className="rounded-xl bg-white p-3 ring-1 ring-[var(--rcg-border)]"><strong>Geofence radius</strong><br />{settings?.site_geofence_radius_m ?? "—"} m</p>
+          <p className="rounded-xl bg-white p-3 ring-1 ring-[var(--rcg-border)]"><strong>GPS accuracy limit</strong><br />±{settings?.site_location_accuracy_limit_m ?? "—"} m</p>
+        </div>
+      </section>
+
+      <section className="card p-5 sm:p-6">
+        <div className="mb-4">
+          <p className="section-kicker">Location capture</p>
+          <h2 className="text-2xl font-black">Recent clock-in evidence</h2>
+          <p className="mt-1 text-sm text-[var(--rcg-muted)]">Use this when testing location permissions. “Location unavailable” means the device did not return a usable GPS position at clock-in; it does not mean the person was off site.</p>
+        </div>
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Clock in</th><th>User</th><th>Result</th><th>Evidence</th><th>First verified on site</th></tr></thead>
+            <tbody>
+              {locationSessions.length ? locationSessions.map((row) => {
+                const tone = locationEvidenceTone(row.clock_in_location_status);
+                const badgeClass =
+                  tone === "ok"
+                    ? "!bg-green-100 !text-green-800"
+                    : tone === "warn"
+                      ? "!bg-amber-100 !text-amber-900"
+                      : "!bg-slate-100 !text-slate-700";
+                return (
+                  <tr key={row.id}>
+                    <td className="whitespace-nowrap">{formatUkDateTime(row.clock_in_at)}</td>
+                    <td className="font-extrabold">{profileNames.get(row.profile_id) ?? "Unknown"}</td>
+                    <td><span className={`badge ${badgeClass}`}>{locationEvidenceLabel(row.clock_in_location_status)}</span></td>
+                    <td className="max-w-md text-xs text-[var(--rcg-muted)]">{locationEvidenceDetail(row)}</td>
+                    <td>{row.first_on_site_verified_at ? formatUkDateTime(row.first_on_site_verified_at) : "Not recorded"}</td>
+                  </tr>
+                );
+              }) : <tr><td colSpan={5} className="text-[var(--rcg-muted)]">No location-aware sessions yet.</td></tr>}
+            </tbody>
+          </table>
         </div>
       </section>
 

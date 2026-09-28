@@ -10,6 +10,15 @@ type ReportRow = {
   clock_out_method: string | null;
   notes: string | null;
   hours: number;
+  clock_in_location_status: string | null;
+  clock_in_distance_m: number | null;
+  clock_in_accuracy_m: number | null;
+  first_on_site_verified_at: string | null;
+  first_on_site_verification_method: string | null;
+  last_presence_check_at: string | null;
+  location_label: string;
+  location_detail: string;
+  arrival_delay_minutes: number | null;
 };
 
 type SummaryRow = {
@@ -46,8 +55,40 @@ export function ReportExports({ rows, summary, from, to }: { rows: ReportRow[]; 
         type="button"
         disabled={!rows.length}
         onClick={() => download(`rcg-hours-detail-${suffix}.csv`, [
-          ["Name", "Email", "Clock in", "Clock out", "Hours", "Clock in method", "Clock out method", "Notes"],
-          ...rows.map((row) => [row.full_name, row.email, row.clock_in_at, row.clock_out_at ?? "", row.hours.toFixed(2), row.clock_in_method, row.clock_out_method ?? "", row.notes ?? ""]),
+          [
+            "Name",
+            "Email",
+            "Clock in",
+            "Clock out",
+            "Hours",
+            "Clock in method",
+            "Clock out method",
+            "Location status",
+            "Distance outside site (m)",
+            "GPS accuracy (m)",
+            "First verified on site",
+            "Arrival delay (minutes)",
+            "First on-site verification method",
+            "Last presence check",
+            "Notes",
+          ],
+          ...rows.map((row) => [
+            row.full_name,
+            row.email,
+            row.clock_in_at,
+            row.clock_out_at ?? "",
+            row.hours.toFixed(2),
+            row.clock_in_method,
+            row.clock_out_method ?? "",
+            row.location_label,
+            row.clock_in_distance_m ?? "",
+            row.clock_in_accuracy_m ?? "",
+            row.first_on_site_verified_at ?? "",
+            row.arrival_delay_minutes ?? "",
+            row.first_on_site_verification_method ?? "",
+            row.last_presence_check_at ?? "",
+            row.notes ?? "",
+          ]),
         ])}
       >
         Export detailed CSV

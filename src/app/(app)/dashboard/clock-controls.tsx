@@ -44,7 +44,7 @@ function getCurrentLocation(): Promise<BrowserLocation | null> {
 
 function needsArrivalVerification(status?: string | null, verifiedAt?: string | null) {
   if (verifiedAt) return false;
-  return ["outside_site", "near_boundary", "location_uncertain"].includes(status ?? "");
+  return ["outside_site", "near_boundary", "location_uncertain", "location_unavailable"].includes(status ?? "");
 }
 
 export function ClockControls({
