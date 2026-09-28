@@ -46,6 +46,8 @@ export default async function OnSitePage() {
             full_name: row.full_name,
             clock_in_at: row.clock_in_at,
             profile_type: row.profile_type,
+            attendance_category: row.attendance_category,
+            organisation: row.organisation,
           }))}
         />
       ) : null}
