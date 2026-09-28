@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
 
   let profileQuery = supabase
     .from("profiles")
-    .select("id,full_name,email,short_code,profile_type,is_active,archived_at,can_use_kiosk")
+    .select("id,full_name,email,short_code,profile_type,is_active,archived_at,can_use_kiosk,kiosk_user_enabled")
     .ilike("short_code", identifier)
     .eq("profile_type", "account")
     .maybeSingle();
@@ -107,14 +107,14 @@ Deno.serve(async (req) => {
   if (!profile && identifier.includes("@")) {
     const response = await supabase
       .from("profiles")
-      .select("id,full_name,email,short_code,profile_type,is_active,archived_at,can_use_kiosk")
+      .select("id,full_name,email,short_code,profile_type,is_active,archived_at,can_use_kiosk,kiosk_user_enabled")
       .ilike("email", identifier)
       .eq("profile_type", "account")
       .maybeSingle();
     profile = response.data;
   }
 
-  if (!profile || !profile.is_active || profile.archived_at || !profile.can_use_kiosk) {
+  if (!profile || !profile.is_active || profile.archived_at || !profile.can_use_kiosk || !profile.kiosk_user_enabled) {
     await supabase.from("kiosk_events").insert({
       entered_identifier: identifier,
       resolved_profile_id: profile?.id ?? null,
