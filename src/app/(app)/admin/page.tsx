@@ -13,7 +13,7 @@ export default async function AdminPage() {
     supabase.from("current_on_site_view").select("*").order("clock_in_at", { ascending: true }),
     supabase
       .from("profiles")
-      .select("id,full_name,profile_type,is_active,archived_at")
+      .select("id,full_name,profile_type,attendance_category,organisation,is_active,archived_at")
       .eq("is_active", true)
       .is("archived_at", null)
       .order("full_name"),
@@ -66,6 +66,8 @@ export default async function AdminPage() {
           full_name: row.full_name,
           clock_in_at: row.clock_in_at,
           profile_type: row.profile_type,
+          attendance_category: row.attendance_category,
+          organisation: row.organisation,
         }))}
       />
 
