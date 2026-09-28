@@ -116,10 +116,6 @@ export function AdminAttendanceControls({
                     </option>
                   ))}
                 </select>
-                <select className="hidden" name="profileId" aria-hidden="true" defaultValue="">
-                  <option value="" />
-                  {openSessions.map((session) => <option key={session.session_id} value={session.profile_id}>{session.profile_id}</option>)}
-                </select>
               </div>
               <div>
                 <label className="mb-1 block text-sm font-extrabold" htmlFor="manual-clock-out">Clock out</label>
