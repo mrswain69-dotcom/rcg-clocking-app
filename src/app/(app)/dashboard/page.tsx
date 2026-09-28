@@ -136,12 +136,7 @@ export default async function DashboardPage() {
             <p className="status-copy">{statusCopy}</p>
           </div>
 
-          <ClockControls
-            isIn={isIn}
-            openSessionId={openSession?.id}
-            clockInLocationStatus={openSession?.clock_in_location_status}
-            firstOnSiteVerifiedAt={openSession?.first_on_site_verified_at}
-          />
+          <ClockControls isIn={isIn} />
         </div>
       </section>
 
