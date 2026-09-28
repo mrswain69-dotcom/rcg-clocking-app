@@ -77,3 +77,17 @@ Open the production app in a supported browser and use **Install RCG Clocking** 
 ## Deployment
 
 `main` is production. Feature branches and pull requests receive CI and Vercel preview builds. Merge only after TypeScript and the production Next.js build pass.
+
+
+## Manual administrator attendance
+
+Owners, admins and developers can use **Admin → Admin attendance** or the admin controls on **On Site** to enter attendance on somebody's behalf.
+
+- Existing people can be clocked in at a chosen local date/time; an optional clock-out time can be entered at the same time for historical/backfilled attendance.
+- A live open session can be clocked out by an administrator using the actual date/time the person left.
+- **Visitor / no app login** creates an attendance-only person. This record has no Supabase Auth user, email login, kiosk access, PIN or push-notification path.
+- An open admin-entered clock-in counts in the site-safety headcount because an administrator has explicitly recorded the person as present.
+- Admin-entered attendance is not GPS/kiosk verified. Its location evidence is shown as **Admin entry · Not location verified**.
+- If a normal app user was manually clocked in and later opens the app, a later device presence check may provide separate on-site evidence; it does not change the fact that the original clock-in was an admin entry.
+- Every admin add/correction/clock-out writes an audit event containing the acting administrator, target person/session, reason, entered times and relevant before/after values.
+- Attendance-only people cannot receive automated presence pings. If still open after hours, management follow-up is required directly.
