@@ -2,9 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { MetricCard } from "@/components/brand/MetricCard";
 import { PageHeader } from "@/components/brand/PageHeader";
-import { OnSiteVerificationIndicator } from "@/components/on-site-verification-indicator";
+import { SessionVerification } from "@/components/session-verification";
 import { requireProfile } from "@/lib/auth";
-import { durationHours, formatHoursMinutes, formatUkDateTime } from "@/lib/dates";
+import {
+  durationHours,
+  formatHoursMinutes,
+  formatUkDateTime,
+} from "@/lib/dates";
 import { HistoryExport } from "./history-client";
 
 export const metadata: Metadata = { title: "Attendance history" };
@@ -20,19 +24,33 @@ function dateValue(date: Date) {
 export default async function HistoryPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const today = new Date();
-  const monthStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
+  const monthStart = new Date(
+    Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1),
+  );
   const mondayOffset = (today.getUTCDay() + 6) % 7;
-  const weekStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() - mondayOffset));
+  const weekStart = new Date(
+    Date.UTC(
+      today.getUTCFullYear(),
+      today.getUTCMonth(),
+      today.getUTCDate() - mondayOffset,
+    ),
+  );
   const todayValue = dateValue(today);
   const monthStartValue = dateValue(monthStart);
   const weekStartValue = dateValue(weekStart);
-  const from = /^\d{4}-\d{2}-\d{2}$/.test(params.from ?? "") ? params.from! : monthStartValue;
-  const to = /^\d{4}-\d{2}-\d{2}$/.test(params.to ?? "") ? params.to! : todayValue;
+  const from = /^\d{4}-\d{2}-\d{2}$/.test(params.from ?? "")
+    ? params.from!
+    : monthStartValue;
+  const to = /^\d{4}-\d{2}-\d{2}$/.test(params.to ?? "")
+    ? params.to!
+    : todayValue;
 
   const { supabase, profile } = await requireProfile();
   const { data } = await supabase
     .from("sessions")
-    .select("id,clock_in_at,clock_out_at,clock_in_method,clock_out_method,clock_in_location_status,first_on_site_verified_at")
+    .select(
+      "id,clock_in_at,clock_out_at,clock_in_method,clock_out_method,clock_in_location_status,first_on_site_verified_at,clock_out_location_status,first_off_site_verified_at,last_location_status,last_presence_check_at",
+    )
     .eq("profile_id", profile.id)
     .gte("clock_in_at", `${from}T00:00:00.000Z`)
     .lte("clock_in_at", `${to}T23:59:59.999Z`)
@@ -41,7 +59,8 @@ export default async function HistoryPage({ searchParams }: PageProps) {
   const sessions = data ?? [];
 
   const totalHours = sessions.reduce(
-    (sum, session) => sum + durationHours(session.clock_in_at, session.clock_out_at),
+    (sum, session) =>
+      sum + durationHours(session.clock_in_at, session.clock_out_at),
     0,
   );
   const averageHours = sessions.length ? totalHours / sessions.length : 0;
@@ -56,9 +75,26 @@ export default async function HistoryPage({ searchParams }: PageProps) {
       />
 
       <section className="metrics-grid">
-        <MetricCard icon="▤" label="Visits in range" value={String(sessions.length)} detail={`${from} to ${to}`} tone="orange" />
-        <MetricCard icon="◷" label="Hours in range" value={formatHoursMinutes(totalHours)} detail="Recorded attendance" />
-        <MetricCard icon="↗" label="Average visit" value={formatHoursMinutes(averageHours)} detail={sessions.length ? "Per session" : "No sessions yet"} tone="neutral" />
+        <MetricCard
+          icon="▤"
+          label="Visits in range"
+          value={String(sessions.length)}
+          detail={`${from} to ${to}`}
+          tone="orange"
+        />
+        <MetricCard
+          icon="◷"
+          label="Hours in range"
+          value={formatHoursMinutes(totalHours)}
+          detail="Recorded attendance"
+        />
+        <MetricCard
+          icon="↗"
+          label="Average visit"
+          value={formatHoursMinutes(averageHours)}
+          detail={sessions.length ? "Per session" : "No sessions yet"}
+          tone="neutral"
+        />
       </section>
 
       <section className="card p-5 sm:p-6">
@@ -68,15 +104,53 @@ export default async function HistoryPage({ searchParams }: PageProps) {
             <h2 className="text-2xl font-black">Filter your visits</h2>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link className="btn btn-soft !min-h-10 !px-4" href={`/history?from=${weekStartValue}&to=${todayValue}`}>This week</Link>
-            <Link className="btn btn-soft !min-h-10 !px-4" href={`/history?from=${monthStartValue}&to=${todayValue}`}>This month</Link>
+            <Link
+              className="btn btn-soft !min-h-10 !px-4"
+              href={`/history?from=${weekStartValue}&to=${todayValue}`}
+            >
+              This week
+            </Link>
+            <Link
+              className="btn btn-soft !min-h-10 !px-4"
+              href={`/history?from=${monthStartValue}&to=${todayValue}`}
+            >
+              This month
+            </Link>
           </div>
         </div>
 
         <form className="grid gap-4 sm:grid-cols-3" method="get">
-          <div><label className="mb-1 block text-sm font-extrabold" htmlFor="from">From</label><input className="input" id="from" name="from" type="date" defaultValue={from} required /></div>
-          <div><label className="mb-1 block text-sm font-extrabold" htmlFor="to">To</label><input className="input" id="to" name="to" type="date" defaultValue={to} required /></div>
-          <div className="flex items-end"><button className="btn btn-primary w-full" type="submit">Apply dates</button></div>
+          <div>
+            <label className="mb-1 block text-sm font-extrabold" htmlFor="from">
+              From
+            </label>
+            <input
+              className="input"
+              id="from"
+              name="from"
+              type="date"
+              defaultValue={from}
+              required
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-extrabold" htmlFor="to">
+              To
+            </label>
+            <input
+              className="input"
+              id="to"
+              name="to"
+              type="date"
+              defaultValue={to}
+              required
+            />
+          </div>
+          <div className="flex items-end">
+            <button className="btn btn-primary w-full" type="submit">
+              Apply dates
+            </button>
+          </div>
         </form>
       </section>
 
@@ -88,19 +162,33 @@ export default async function HistoryPage({ searchParams }: PageProps) {
         {sessions.length ? (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Clock in</th><th>Clock out</th><th>Duration</th><th>Method</th><th className="text-center">On site</th></tr></thead>
+              <thead>
+                <tr>
+                  <th>Clock in</th>
+                  <th>Clock out</th>
+                  <th>Duration</th>
+                  <th>Method</th>
+                  <th className="text-center">Verification</th>
+                </tr>
+              </thead>
               <tbody>
                 {sessions.map((session) => (
                   <tr key={session.id}>
                     <td>{formatUkDateTime(session.clock_in_at)}</td>
                     <td>{formatUkDateTime(session.clock_out_at)}</td>
-                    <td className="font-extrabold">{formatHoursMinutes(durationHours(session.clock_in_at, session.clock_out_at))}</td>
-                    <td><span className="badge">{session.clock_in_method}</span></td>
+                    <td className="font-extrabold">
+                      {formatHoursMinutes(
+                        durationHours(
+                          session.clock_in_at,
+                          session.clock_out_at,
+                        ),
+                      )}
+                    </td>
+                    <td>
+                      <span className="badge">{session.clock_in_method}</span>
+                    </td>
                     <td className="text-center">
-                      <OnSiteVerificationIndicator
-                        clockInLocationStatus={session.clock_in_location_status}
-                        firstOnSiteVerifiedAt={session.first_on_site_verified_at}
-                      />
+                      <SessionVerification evidence={session} />
                     </td>
                   </tr>
                 ))}

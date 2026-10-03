@@ -20,6 +20,10 @@ type ReportRow = {
   first_on_site_verified_at: string | null;
   first_on_site_verification_method: string | null;
   last_presence_check_at: string | null;
+  verification_label: string;
+  clock_out_location_status: string | null;
+  first_off_site_verified_at: string | null;
+  last_location_status: string | null;
   location_label: string;
   location_detail: string;
   arrival_delay_minutes: number | null;
@@ -53,7 +57,17 @@ function download(filename: string, rows: Array<Array<string | number>>) {
   URL.revokeObjectURL(url);
 }
 
-export function ReportExports({ rows, summary, from, to }: { rows: ReportRow[]; summary: SummaryRow[]; from: string; to: string }) {
+export function ReportExports({
+  rows,
+  summary,
+  from,
+  to,
+}: {
+  rows: ReportRow[];
+  summary: SummaryRow[];
+  from: string;
+  to: string;
+}) {
   const suffix = `${from}_to_${to}`;
 
   return (
@@ -62,46 +76,56 @@ export function ReportExports({ rows, summary, from, to }: { rows: ReportRow[]; 
         className="btn btn-secondary"
         type="button"
         disabled={!rows.length}
-        onClick={() => download(`rcg-hours-detail-${suffix}.csv`, [
-          [
-            "Name",
-            "Email",
-            "Person type",
-            "Organisation",
-            "Clock in",
-            "Clock out",
-            "Hours",
-            "Clock in method",
-            "Clock out method",
-            "Location status",
-            "Distance outside site (m)",
-            "GPS accuracy (m)",
-            "First verified on site",
-            "Arrival delay (minutes)",
-            "First on-site verification method",
-            "Last presence check",
-            "Notes",
-          ],
-          ...rows.map((row) => [
-            row.full_name,
-            row.email,
-            row.attendance_category,
-            row.organisation,
-            row.clock_in_at,
-            row.clock_out_at ?? "",
-            row.hours.toFixed(2),
-            row.clock_in_method,
-            row.clock_out_method ?? "",
-            row.location_label,
-            row.clock_in_distance_m ?? "",
-            row.clock_in_accuracy_m ?? "",
-            row.first_on_site_verified_at ?? "",
-            row.arrival_delay_minutes ?? "",
-            row.first_on_site_verification_method ?? "",
-            row.last_presence_check_at ?? "",
-            row.notes ?? "",
-          ]),
-        ])}
+        onClick={() =>
+          download(`rcg-hours-detail-${suffix}.csv`, [
+            [
+              "Name",
+              "Email",
+              "Person type",
+              "Organisation",
+              "Clock in",
+              "Clock out",
+              "Hours",
+              "Clock in method",
+              "Clock out method",
+              "On-site verification",
+              "Clock-out location",
+              "Off-site departure verified",
+              "Latest check result",
+              "Original clock-in location",
+              "Distance outside site (m)",
+              "GPS accuracy (m)",
+              "First verified on site",
+              "Arrival delay (minutes)",
+              "First on-site verification method",
+              "Last presence check",
+              "Notes",
+            ],
+            ...rows.map((row) => [
+              row.full_name,
+              row.email,
+              row.attendance_category,
+              row.organisation,
+              row.clock_in_at,
+              row.clock_out_at ?? "",
+              row.hours.toFixed(2),
+              row.clock_in_method,
+              row.clock_out_method ?? "",
+              row.verification_label,
+              row.clock_out_location_status ?? "",
+              row.first_off_site_verified_at ?? "",
+              row.last_location_status ?? "",
+              row.location_label,
+              row.clock_in_distance_m ?? "",
+              row.clock_in_accuracy_m ?? "",
+              row.first_on_site_verified_at ?? "",
+              row.arrival_delay_minutes ?? "",
+              row.first_on_site_verification_method ?? "",
+              row.last_presence_check_at ?? "",
+              row.notes ?? "",
+            ]),
+          ])
+        }
       >
         Export detailed CSV
       </button>
@@ -109,17 +133,28 @@ export function ReportExports({ rows, summary, from, to }: { rows: ReportRow[]; 
         className="btn btn-secondary"
         type="button"
         disabled={!summary.length}
-        onClick={() => download(`rcg-hours-summary-${suffix}.csv`, [
-          ["Name", "Email / access", "Person type", "Organisation", "Visits", "Hours"],
-          ...summary.map((row) => [
-            row.full_name,
-            row.profile_type === "attendance_only" ? "Attendance only · no login" : row.email,
-            row.attendance_category,
-            row.organisation,
-            row.visits,
-            row.hours.toFixed(2),
-          ]),
-        ])}
+        onClick={() =>
+          download(`rcg-hours-summary-${suffix}.csv`, [
+            [
+              "Name",
+              "Email / access",
+              "Person type",
+              "Organisation",
+              "Visits",
+              "Hours",
+            ],
+            ...summary.map((row) => [
+              row.full_name,
+              row.profile_type === "attendance_only"
+                ? "Attendance only · no login"
+                : row.email,
+              row.attendance_category,
+              row.organisation,
+              row.visits,
+              row.hours.toFixed(2),
+            ]),
+          ])
+        }
       >
         Export summary CSV
       </button>

@@ -419,3 +419,51 @@ tbody tr:hover { background: rgba(232,244,233,.34); }
   .status-title { font-size: 2rem; }
   .auth-card, .kiosk-card { padding: 1.45rem; }
 }
+
+.verification-milestones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.verification-milestone {
+  border: 1px solid;
+  border-radius: 12px;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+.verification-milestone summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.verification-milestone summary span {
+  font-size: 18px;
+  font-weight: 900;
+}
+.verification-milestone p {
+  max-width: 240px;
+  margin-top: 8px;
+}
+.verification-green {
+  color: #166534;
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+.verification-amber {
+  color: #92400e;
+  background: #fffbeb;
+  border-color: #fcd34d;
+}
+.verification-grey {
+  color: #475569;
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+.verification-red {
+  color: #991b1b;
+  background: #fef2f2;
+  border-color: #fca5a5;
+}

@@ -31,6 +31,9 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Verification and register security tests
+        run: npm test
+
       - name: Production build
         run: npm run build
 
