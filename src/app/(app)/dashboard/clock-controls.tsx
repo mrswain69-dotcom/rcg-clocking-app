@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   clockIn,
   clockOut,
+  recordSessionLocation,
   type BrowserLocation,
 } from "./actions";
 
@@ -41,6 +42,7 @@ function getCurrentLocation(): Promise<BrowserLocation | null> {
 export function ClockControls({ isIn }: Props) {
   const router = useRouter();
   const [busy, setBusy] = useState<"in" | "out" | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function handleClockIn() {
@@ -63,8 +65,29 @@ export function ClockControls({ isIn }: Props) {
     setError(null);
 
     try {
-      await clockOut();
+      const result = await clockOut();
+      setMessage("Clock-out saved. Checking departure location…");
       router.refresh();
+      if (result) {
+        try {
+          const location = await getCurrentLocation();
+          const evidence = await recordSessionLocation(
+            result.sessionId,
+            "clock_out",
+            location,
+          );
+          setMessage(
+            evidence.verified_at
+              ? "Clock-out saved · off-site departure verified."
+              : "Clock-out saved · departure verification pending while the app is active, for up to 15 minutes.",
+          );
+        } catch {
+          setMessage(
+            "Clock-out saved. Location verification is currently unavailable.",
+          );
+        }
+        router.refresh();
+      }
     } catch {
       setError("Unable to clock out. Please try again.");
     } finally {
@@ -94,6 +117,11 @@ export function ClockControls({ isIn }: Props) {
         <small>I&apos;m leaving site</small>
       </button>
 
+      {message ? (
+        <p className="text-sm font-bold" role="status">
+          {message}
+        </p>
+      ) : null}
       {error ? <p className="text-sm font-bold text-red-700">{error}</p> : null}
     </div>
   );

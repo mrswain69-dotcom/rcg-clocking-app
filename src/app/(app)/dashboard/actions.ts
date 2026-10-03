@@ -62,7 +62,9 @@ function locationArgs(location?: BrowserLocation | null) {
   };
 }
 
-export async function clockIn(location?: BrowserLocation | null): Promise<ClockInResult> {
+export async function clockIn(
+  location?: BrowserLocation | null,
+): Promise<ClockInResult> {
   const { supabase } = await requireProfile();
 
   const { data, error } = await supabase
@@ -142,10 +144,13 @@ export async function respondPresenceCheckLocation(
 ): Promise<{ status: string }> {
   const { supabase } = await requireProfile();
 
-  const { data, error } = await supabase.rpc("resolve_presence_check_location", {
-    p_request_id: requestId,
-    ...locationArgs(location),
-  });
+  const { data, error } = await supabase.rpc(
+    "resolve_presence_check_location",
+    {
+      p_request_id: requestId,
+      ...locationArgs(location),
+    },
+  );
 
   if (error) throw new Error("Unable to complete the presence check.");
   refreshAttendanceViews();
@@ -160,10 +165,13 @@ export async function respondPresenceCheckClockOut(
   const parsed = new Date(clockOutAt);
   if (Number.isNaN(parsed.getTime())) throw new Error("Enter a valid time.");
 
-  const { data, error } = await supabase.rpc("resolve_presence_check_clock_out", {
-    p_request_id: requestId,
-    p_clock_out_at: parsed.toISOString(),
-  });
+  const { data, error } = await supabase.rpc(
+    "resolve_presence_check_clock_out",
+    {
+      p_request_id: requestId,
+      p_clock_out_at: parsed.toISOString(),
+    },
+  );
 
   if (error) throw new Error("Unable to correct the clock-out time.");
   refreshAttendanceViews();
@@ -172,53 +180,57 @@ export async function respondPresenceCheckClockOut(
 
 export async function respondPresenceCheckWorkingOffSite(requestId: string) {
   const { supabase } = await requireProfile();
-  const { error } = await supabase.rpc("resolve_presence_check_working_off_site", {
-    p_request_id: requestId,
-  });
+  const { error } = await supabase.rpc(
+    "resolve_presence_check_working_off_site",
+    {
+      p_request_id: requestId,
+    },
+  );
 
   if (error) throw new Error("Unable to update your site status.");
   refreshAttendanceViews();
   return { success: true };
 }
 
-export async function respondPresenceCheckUserConfirmedOnSite(requestId: string) {
+export async function respondPresenceCheckUserConfirmedOnSite(
+  requestId: string,
+) {
   const { supabase } = await requireProfile();
-  const { error } = await supabase.rpc("resolve_presence_check_user_confirmed_on_site", {
-    p_request_id: requestId,
-  });
+  const { error } = await supabase.rpc(
+    "resolve_presence_check_user_confirmed_on_site",
+    {
+      p_request_id: requestId,
+    },
+  );
 
   if (error) throw new Error("Unable to confirm your site status.");
   refreshAttendanceViews();
   return { success: true };
 }
 
-export async function clockOut() {
-  const { supabase, profile } = await requireProfile();
-
-  const { data: openSession } = await supabase
-    .from("sessions")
-    .select("id")
-    .eq("profile_id", profile.id)
-    .is("clock_out_at", null)
-    .order("clock_in_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (!openSession) {
-    refreshAttendanceViews();
-    return;
-  }
-
-  const { error } = await supabase
-    .from("sessions")
-    .update({
-      clock_out_at: new Date().toISOString(),
-      clock_out_method: "web",
+export async function recordSessionLocation(
+  sessionId: string,
+  phase: "arrival" | "periodic" | "clock_out" | "departure",
+  location: BrowserLocation | null,
+) {
+  const { supabase } = await requireProfile();
+  const { data, error } = await supabase
+    .rpc("record_session_location", {
+      p_session_id: sessionId,
+      p_phase: phase,
+      ...locationArgs(location),
     })
-    .eq("id", openSession.id)
-    .eq("profile_id", profile.id)
-    .is("clock_out_at", null);
+    .single();
+  if (error || !data) throw new Error("Location check could not be saved.");
+  refreshAttendanceViews();
+  revalidatePath("/admin/reports");
+  return data as { location_status: string; verified_at: string | null };
+}
 
+export async function clockOut(): Promise<{ sessionId: string } | null> {
+  const { supabase } = await requireProfile();
+  const { data, error } = await supabase.rpc("clock_out_for_verification");
   if (error) throw new Error("Unable to clock out.");
   refreshAttendanceViews();
+  return data ? { sessionId: String(data) } : null;
 }
