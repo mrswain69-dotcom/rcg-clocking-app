@@ -34,6 +34,12 @@ Deno.serve(async (request: Request) => {
       .maybeSingle();
     if (accessError || !visibleSession)
       return reply({ error: "Register access denied" }, 403);
+    const { data: capabilities, error: capabilityError } = await userClient.rpc(
+      "register_capabilities",
+      { p_session: sessionId },
+    );
+    if (capabilityError || !capabilities?.take)
+      return reply({ error: "Attendance permission required" }, 403);
     if (visibleSession.status !== "confirmed")
       return reply({ error: "Confirm the register first" }, 409);
     const apiKey = Deno.env.get("RESEND_API_KEY");

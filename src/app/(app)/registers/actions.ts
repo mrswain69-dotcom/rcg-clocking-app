@@ -9,14 +9,19 @@ export async function registerAction(form: FormData) {
   const action = String(form.get("action") ?? "");
   const data: Record<string, unknown> = Object.fromEntries(form.entries());
   const sessionId = String(form.get("session_id") ?? "");
-  const base = /^[0-9a-f-]{36}$/i.test(sessionId)
-    ? `/registers/${sessionId}`
-    : "/registers";
+  const programmeId = String(form.get("programme_id") ?? "");
+  const base = /^[0-9a-f-]{36}$/i.test(programmeId)
+    ? `/registers/programmes/${programmeId}`
+    : /^[0-9a-f-]{36}$/i.test(sessionId)
+      ? `/registers/${sessionId}`
+      : action === "create_programme"
+        ? "/registers/programmes/new"
+        : "/registers";
   let errorMessage: string | null = null;
   let resultId: string | null = null;
   let message = "Saved successfully.";
   try {
-    if (action === "create_session") {
+    if (["create_session", "update_session"].includes(action)) {
       data.starts_at = londonLocalInputToIso(String(data.starts_at));
       data.ends_at = londonLocalInputToIso(String(data.ends_at));
     }
@@ -27,7 +32,30 @@ export async function registerAction(form: FormData) {
       "enabled",
     ])
       data[key] = form.get(key) === "on";
-    const { data: id, error } = await supabase.rpc("register_action", {
+    const programmeActions = [
+      "create_programme",
+      "update_programme",
+      "programme_permission",
+      "programme_enrol",
+      "generate_sessions",
+    ];
+    if (programmeActions.includes(action)) {
+      data.excluded_dates = String(form.get("excluded_dates") ?? "")
+        .split(/[\s,]+/)
+        .filter(Boolean);
+      data.active = form.get("active") === "on";
+    }
+    const rpc = programmeActions.includes(action)
+      ? "programme_action"
+      : [
+            "remove_lead",
+            "remove_attendee",
+            "update_session",
+            "refresh_roster",
+          ].includes(action)
+        ? "register_setup_action"
+        : "register_action";
+    const { data: id, error } = await supabase.rpc(rpc, {
       p_action: action,
       p_data: data,
     });
@@ -50,7 +78,7 @@ export async function registerAction(form: FormData) {
   if (errorMessage)
     redirect(`${base}?error=${encodeURIComponent(errorMessage)}`);
   redirect(
-    `${action === "create_session" ? `/registers/${resultId}` : base}?message=${encodeURIComponent(message)}`,
+    `${action === "create_programme" ? `/registers/programmes/${resultId}` : action === "create_session" ? `/registers/${resultId}` : base}?message=${encodeURIComponent(message)}`,
   );
 }
 

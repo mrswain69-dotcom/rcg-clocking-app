@@ -1,9 +1,6 @@
 import type { AppProfile } from "@/lib/auth";
 export function isRegisterManager(profile: AppProfile) {
-  return (
-    profile.role === "owner" ||
-    (profile.role === "admin" && profile.can_manage_registers)
-  );
+  return profile.role === "owner" || profile.can_manage_registers;
 }
 export type RegisterSession = {
   id: string;

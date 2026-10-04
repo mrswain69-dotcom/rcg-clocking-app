@@ -16,9 +16,21 @@ No raw coordinate trail is retained. Location absence or uncertainty never cance
 
 ## Register access
 
-Client records are separate from login profiles and staff clocking sessions. Owner access is built in. Administrators need the explicit `can_manage_registers` capability, assigned by the owner. A developer role does not grant client access automatically. An assigned lead can read and take only their assigned registers and receives display names with internal references, not full client directory access. All permissions are enforced in Postgres, in addition to the UI.
+Client records are separate from login profiles and staff clocking sessions. Owner access is built in. Any active account can receive the explicit `can_manage_registers` capability from the owner, independently of its clocking role. A developer role does not grant client access automatically. An assigned lead can read and take only their assigned registers and receives display names with internal references, not full client directory access. All permissions are enforced in Postgres, in addition to the UI.
 
 Managers create individual/group sessions, enrol expected attendees and assign leads. Individual sessions allow one expected attendee. Expected attendees allow genuine missed-session counting. A client can have several approved school/carer contacts; each contact is linked to that client rather than to an entire group. Approval records who verified the address and sharing authority, when and the verification reference. Turning a contact off blocks outstanding notifications. Names, session labels and approval/correction references must not contain clinical or safeguarding notes.
+
+## Regular programmes and scoped permissions
+
+Register managers create weekly/fortnightly group programmes and individual bookings. A programme stores first/last dates, UK start/end times, excluded dates for breaks and a reusable roster with per-client enrolment start/end dates. Managers allocate clients centrally; a coordinator can change enrolment dates for already allocated clients, but cannot search the full client directory or allocate an unrelated client.
+
+Managers assign an account one role per programme: coordinator (schedule, roster, session leads, attendance), lead (take/confirm attendance), or viewer (read attendance and scoped reports/exports). Removing an assignment takes effect immediately. Any explicit session lead assignment remains independent and must be removed separately. A register manager alone can change programme permission assignments; only the owner grants global manager access. Reporting viewers cannot read recipient addresses or delivery payloads, preview contacts, change attendance, confirm registers or invoke the email worker. Full client names and contact approval remain manager-only.
+
+After reviewing missing dates, a coordinator/manager explicitly creates registers for the schedule. This is not an unattended recurring job. Generation handles UK DST, skips excluded/past dates and already generated dates, and copies only clients expected on each date. Repeated generation cannot duplicate occurrences. Individual enrolment windows cannot overlap for different clients.
+
+Every dated register retains its own roster and schedule. Editing programme settings/enrolments affects subsequently generated registers; it never silently moves, removes or rewrites existing registers. Schedule changes therefore require explicit edits/cancellations of existing future dates. Future untouched registers can be rescheduled, have a one-off attendee removed, or explicitly replace their roster from current programme enrolments. Refreshing replaces one-off additions too, and requires acknowledgement. Once attendance is recorded, those setup replacements are locked. A coordinator may add only clients already allocated to that programme; managers can add other active clients. Session lead assignments can be added or removed separately.
+
+Confirmed attendance corrections remain manager-only, including reconfirmation of a corrected draft. Coordinators may cancel future unconfirmed sessions with a reason; historical/confirmed cancellation requires a manager. Cancellation remains excluded from totals. Programme and permission changes are audited, and stale revisions reject conflicting saves. A programme can be made inactive to prevent further generation without hiding its history.
 
 ## Attendance and notification workflow
 
@@ -43,15 +55,17 @@ Register reports search people/session names and filter dates, person and status
 
 The existing production schema was inspected read-only and matches the prerequisite columns. Production records have not been changed by this build.
 
-1. Apply the two new timestamped migrations in order, **before** deploying the frontend that selects their columns. Existing numbered legacy files correspond to older, already applied production migrations; do not replay them or run an unreviewed wholesale database push.
+1. Apply the three new timestamped migrations in order, **before** deploying the frontend that selects their columns. Existing numbered legacy files correspond to older, already applied production migrations; do not replay them or run an unreviewed wholesale database push.
 2. Deploy `register-notifications`, including `_shared/register-email.ts` and its pinned import map, with JWT verification enabled.
 3. Reuse the existing Resend account/API key and configure `REGISTER_FROM_EMAIL` with a verified sender. Leave `REGISTER_EMAIL_ENABLED` unset/false initially.
 4. Deploy the frontend preview and test with fictitious clients, an explicitly approved test inbox, leads and unrelated users. Check phone GPS on site and outside the boundary, active/hidden app behaviour and timed expiry.
 5. Enable register email delivery only after the approved-contact workflow and template are accepted. Do not use real schools/carers for testing.
-6. Owner grants manager capabilities and managers assign session leads.
+6. Owner grants manager capabilities; managers create programmes, allocate clients and assign coordinators/leads/viewers; coordinators review and generate dated registers.
 
 RCG still needs to agree purpose, sharing authority, privacy information and retention periods before storing real client records. This version does not automatically delete attendance or audit data; retention must be agreed before an automated policy is added. Location monitoring remains supplementary, and a panic/assistance feature requires its own responder and escalation design.
 
 ## Validation
 
 `npm test` runs logic tests and the actual new migration SQL in isolated PGlite/Postgres against a fixture matching the existing columns. Tests cover ownership, current user opt-in, rate limits, departure expiry, retained first verification, RLS, lead isolation, developer exclusion, approved-contact checks, stale revisions, transactionally queued minimal notifications, manager corrections, queue claim deduplication and individual roster limits. This does not substitute for a deployment test against Supabase's API/Auth/Edge runtime or real GPS hardware.
+
+Programme validation additionally exercises scoped coordinator/lead/viewer access, permission revocation, independent manager grants, enrolment snapshots, duplicate generation, excluded dates and UK DST.

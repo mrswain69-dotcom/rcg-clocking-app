@@ -54,7 +54,7 @@ test("new migrations enforce verification consent, ownership, register access an
  grant usage on schema public,auth,private to authenticated,service_role,anon;
  create type public.app_role as enum('owner','admin','developer','user');
  create type public.clock_method as enum('web','kiosk','admin_override');
- create table public.profiles(id uuid primary key,user_id uuid,role public.app_role,is_active boolean default true,archived_at timestamptz,profile_type text default 'account');
+ create table public.profiles(id uuid primary key,user_id uuid,role public.app_role,is_active boolean default true,archived_at timestamptz,full_name text default 'Test account',profile_type text default 'account');
  create table public.settings(id int primary key,site_latitude float8,site_longitude float8,site_geofence_radius_m int,site_location_accuracy_limit_m int);
  insert into public.settings values(1,51.43362,-2.57128,70,100);
  create table public.sessions(id uuid primary key default gen_random_uuid(),profile_id uuid references public.profiles(id),clock_in_at timestamptz default now(),clock_out_at timestamptz,clock_in_method public.clock_method default 'web',clock_out_method public.clock_method,clock_in_location_status text,clock_in_distance_m int,clock_in_accuracy_m int,first_on_site_verified_at timestamptz,first_on_site_verification_method text,last_presence_check_at timestamptz,last_presence_distance_m int,last_presence_accuracy_m int,current_presence_status text,current_presence_status_at timestamptz,current_presence_source text);
@@ -62,7 +62,11 @@ test("new migrations enforce verification consent, ownership, register access an
  grant select on public.profiles,public.sessions to authenticated;
  `);
   const migrationNames = (await readdir("supabase/migrations"))
-    .filter((n) => /_(verification_milestones|session_registers)\.sql$/.test(n))
+    .filter((n) =>
+      /_(verification_milestones|session_registers|register_programmes)\.sql$/.test(
+        n,
+      ),
+    )
     .sort();
   for (const name of migrationNames)
     await db.exec(await readFile(`supabase/migrations/${name}`, "utf8"));
@@ -451,6 +455,403 @@ test("new migrations enforce verification consent, ownership, register access an
         /permission denied/,
       );
       await as(ids.owner);
+    },
+  );
+  await t.test(
+    "programmes generate dated snapshots, respect enrolments and UK daylight saving",
+    async () => {
+      await as(ids.owner);
+      const rpc = async (name, values) =>
+        (
+          await query("select public.programme_action($1,$2::jsonb) as id", [
+            name,
+            JSON.stringify(values),
+          ])
+        )[0].id;
+      const programme = await rpc("create_programme", {
+        name: "Sunday group",
+        external_label: "RCG session",
+        kind: "group",
+        first_date: "2030-03-24",
+        last_date: "2030-04-14",
+        start_time: "10:00",
+        end_time: "12:00",
+        interval_weeks: 1,
+        excluded_dates: ["2030-04-14"],
+      });
+      const client = await action("create_client", {
+        full_name: "Protected Programme Client",
+        display_name: "Pat C.",
+      });
+      let revision = 1;
+      const mutate = async (name, values = {}) => {
+        const result = await rpc(name, {
+          programme_id: programme,
+          revision,
+          ...values,
+        });
+        revision++;
+        return result;
+      };
+      await mutate("programme_enrol", {
+        client_id: client,
+        from_date: "2030-03-24",
+        to_date: "2030-03-31",
+      });
+      await mutate("programme_permission", {
+        profile_id: ids.lead,
+        access_role: "coordinator",
+      });
+      await mutate("programme_permission", {
+        profile_id: ids.other,
+        access_role: "viewer",
+      });
+      await mutate("programme_permission", {
+        profile_id: ids.developer,
+        access_role: "lead",
+      });
+      await mutate("generate_sessions");
+      const sessions = await query(
+        "select * from public.register_sessions where programme_id=$1 order by starts_at",
+        [programme],
+      );
+      assert.equal(sessions.length, 3);
+      assert.equal(new Date(sessions[0].starts_at).getUTCHours(), 10);
+      assert.equal(new Date(sessions[1].starts_at).getUTCHours(), 9);
+      assert.equal(
+        (
+          await query("select * from public.register_roster($1)", [
+            sessions[0].id,
+          ])
+        ).length,
+        1,
+      );
+      assert.equal(
+        (
+          await query("select * from public.register_roster($1)", [
+            sessions[2].id,
+          ])
+        ).length,
+        0,
+      );
+      await mutate("generate_sessions");
+      assert.equal(
+        (
+          await query(
+            "select * from public.register_sessions where programme_id=$1",
+            [programme],
+          )
+        ).length,
+        3,
+      );
+      await mutate("programme_enrol", {
+        client_id: client,
+        from_date: "2030-03-24",
+        to_date: "2030-03-24",
+      });
+      assert.equal(
+        (
+          await query("select * from public.register_roster($1)", [
+            sessions[1].id,
+          ])
+        ).length,
+        1,
+        "existing roster is a snapshot",
+      );
+      await as(ids.other);
+      assert.equal(
+        (
+          await query(
+            "select * from public.register_sessions where programme_id=$1",
+            [programme],
+          )
+        ).length,
+        3,
+      );
+      assert.equal(
+        (await query("select * from public.register_clients")).length,
+        0,
+      );
+      const cap = (
+        await query("select public.register_capabilities(null,$1) as cap", [
+          sessions[0].id,
+        ])
+      )[0].cap;
+      assert.equal(cap.take, false);
+      assert.equal(cap.manage, false);
+      await assert.rejects(
+        action("save_attendance", {
+          session_id: sessions[0].id,
+          revision: 1,
+          rows: [],
+        }),
+        /Attendance permission/,
+      );
+      await assert.rejects(
+        action("confirm", { session_id: sessions[0].id, revision: 1 }),
+        /Attendance permission/,
+      );
+      await assert.rejects(
+        query("select * from public.register_recipient_preview($1)", [
+          sessions[0].id,
+        ]),
+        /access denied/,
+      );
+      await assert.rejects(
+        rpc("generate_sessions", { programme_id: programme, revision }),
+        /Coordinator permission/,
+      );
+      await as(ids.developer);
+      assert.equal(
+        (
+          await query("select public.register_capabilities(null,$1) as cap", [
+            sessions[0].id,
+          ])
+        )[0].cap.take,
+        true,
+      );
+      await assert.rejects(
+        action("cancel", {
+          session_id: sessions[0].id,
+          revision: 1,
+          reason: "Not allowed",
+        }),
+        /Coordinator permission/,
+      );
+      await as(ids.lead);
+      await assert.rejects(
+        mutate("programme_permission", {
+          profile_id: ids.other,
+          access_role: "coordinator",
+        }),
+        /manager permission/,
+      );
+      await assert.rejects(
+        mutate("programme_enrol", {
+          client_id: clientB,
+          from_date: "2030-03-24",
+        }),
+        /allocate client/,
+      );
+      const minimal = (
+        await query("select * from public.programme_roster($1)", [programme])
+      )[0];
+      assert.equal(minimal.display_name, "Pat C.");
+      assert.equal(minimal.full_name, undefined);
+      await query(
+        "select public.register_setup_action('refresh_roster',$1::jsonb)",
+        [JSON.stringify({ session_id: sessions[1].id, revision: 1 })],
+      );
+      assert.equal(
+        (
+          await query("select * from public.register_roster($1)", [
+            sessions[1].id,
+          ])
+        ).length,
+        0,
+      );
+      await as(ids.owner);
+      await mutate("programme_permission", {
+        profile_id: ids.other,
+        access_role: "none",
+      });
+      await as(ids.other);
+      assert.equal(
+        (
+          await query(
+            "select * from public.register_sessions where programme_id=$1",
+            [programme],
+          )
+        ).length,
+        0,
+        "revocation is immediate",
+      );
+      await as(ids.owner);
+    },
+  );
+  await t.test(
+    "register management is independent of clocking admin role and grants are audited",
+    async () => {
+      await as(ids.owner);
+      await action("manager_permission", {
+        profile_id: ids.other,
+        enabled: true,
+      });
+      await as(ids.other);
+      await action("create_client", {
+        full_name: "Manager test",
+        display_name: "M. T.",
+      });
+      await assert.rejects(
+        action("manager_permission", {
+          profile_id: ids.developer,
+          enabled: true,
+        }),
+        /Owner permission/,
+      );
+      await as(ids.owner);
+      await action("manager_permission", {
+        profile_id: ids.other,
+        enabled: false,
+      });
+      await as(ids.other);
+      await assert.rejects(
+        action("create_client", {
+          full_name: "No access",
+          display_name: "N. A.",
+        }),
+        /manager permission/,
+      );
+      await as(ids.owner);
+    },
+  );
+  await t.test(
+    "fortnightly individual bookings reject overlap and setup changes cannot rewrite recorded attendance",
+    async () => {
+      await as(ids.owner);
+      const rpc = async (name, values) =>
+        (
+          await query("select public.programme_action($1,$2::jsonb) as id", [
+            name,
+            JSON.stringify(values),
+          ])
+        )[0].id;
+      const pid = await rpc("create_programme", {
+        name: "Individual booking",
+        external_label: "RCG session",
+        kind: "individual",
+        first_date: "2030-06-03",
+        last_date: "2030-07-01",
+        start_time: "09:00",
+        end_time: "10:00",
+        interval_weeks: 2,
+        excluded_dates: [],
+      });
+      let revision = 1;
+      const change = async (name, values = {}) => {
+        const result = await rpc(name, {
+          programme_id: pid,
+          revision,
+          ...values,
+        });
+        revision++;
+        return result;
+      };
+      await change("programme_enrol", {
+        client_id: clientA,
+        from_date: "2030-06-03",
+        to_date: "2030-06-17",
+      });
+      await assert.rejects(
+        change("programme_enrol", {
+          client_id: clientB,
+          from_date: "2030-06-17",
+        }),
+        /already has an attendee/,
+      );
+      await change("programme_enrol", {
+        client_id: clientB,
+        from_date: "2030-06-18",
+      });
+      await assert.rejects(
+        rpc("generate_sessions", { programme_id: pid, revision: 1 }),
+        /Programme changed/,
+      );
+      await change("generate_sessions");
+      const dates = await query(
+        "select * from public.register_sessions where programme_id=$1 order by programme_date",
+        [pid],
+      );
+      assert.equal(dates.length, 3);
+      assert.equal(
+        (
+          await query("select * from public.register_roster($1)", [dates[0].id])
+        )[0].client_id,
+        clientA,
+      );
+      assert.equal(
+        (
+          await query("select * from public.register_roster($1)", [dates[2].id])
+        )[0].client_id,
+        clientB,
+      );
+      const sid = dates[0].id;
+      await action("assign_lead", {
+        session_id: sid,
+        revision: 1,
+        profile_id: ids.lead,
+      });
+      await action("save_attendance", {
+        session_id: sid,
+        revision: 2,
+        rows: [{ client_id: clientA, status: "present" }],
+      });
+      await assert.rejects(
+        query(
+          "select public.register_setup_action('refresh_roster',$1::jsonb)",
+          [JSON.stringify({ session_id: sid, revision: 3 })],
+        ),
+        /untouched/,
+      );
+      await action("confirm", { session_id: sid, revision: 3 });
+      await action("save_attendance", {
+        session_id: sid,
+        revision: 4,
+        rows: [{ client_id: clientA, status: "absent" }],
+        reason: "Correction",
+      });
+      await as(ids.lead);
+      await assert.rejects(
+        action("save_attendance", {
+          session_id: sid,
+          revision: 5,
+          rows: [{ client_id: clientA, status: "present" }],
+          reason: "Reopened draft bypass",
+        }),
+        /Manager and correction reason/,
+      );
+      await assert.rejects(
+        action("confirm", { session_id: sid, revision: 5 }),
+        /Manager must confirm/,
+      );
+      await as(ids.owner);
+      await action("cancel", {
+        session_id: sid,
+        revision: 5,
+        reason: "Cancelled",
+      });
+      await query(
+        "select public.register_setup_action('remove_lead',$1::jsonb)",
+        [
+          JSON.stringify({
+            session_id: sid,
+            revision: 6,
+            profile_id: ids.lead,
+          }),
+        ],
+      );
+      await as(ids.lead);
+      assert.equal(
+        (
+          await query("select * from public.register_sessions where id=$1", [
+            sid,
+          ])
+        ).length,
+        0,
+      );
+      await as(null, "anon");
+      await assert.rejects(
+        rpc("generate_sessions", { programme_id: pid, revision }),
+        /permission denied/,
+      );
+      await as(ids.owner);
+      await assert.rejects(
+        query(
+          "insert into public.register_programme_access values($1,$2,'coordinator')",
+          [pid, ids.other],
+        ),
+        /permission denied/,
+      );
     },
   );
   await t.test(

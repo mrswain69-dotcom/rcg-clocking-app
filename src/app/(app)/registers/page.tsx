@@ -18,6 +18,7 @@ export default async function RegistersPage({
     { data: clients },
     { data: contacts },
     { data: admins },
+    { data: programmes },
   ] = await Promise.all([
     supabase
       .from("register_sessions")
@@ -40,9 +41,14 @@ export default async function RegistersPage({
       ? supabase
           .from("profiles")
           .select("id,full_name,can_manage_registers")
-          .eq("role", "admin")
+          .eq("profile_type", "account")
           .eq("is_active", true)
+          .is("archived_at", null)
       : Promise.resolve({ data: null }),
+    supabase
+      .from("register_programmes")
+      .select("id,name,kind,active,first_date,last_date,interval_weeks")
+      .order("name"),
   ]);
   return (
     <div className="space-y-6">
@@ -63,6 +69,39 @@ export default async function RegistersPage({
         </p>
       ) : null}
       {params.message ? <p role="status">{params.message}</p> : null}
+      <section className="card p-5">
+        <h2 className="text-2xl font-black">Regular programmes</h2>
+        <p className="mt-2">
+          Weekly or fortnightly groups and individual bookings, with a reusable
+          expected roster.
+        </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          {programmes?.map((p) => (
+            <Link
+              className="card p-4"
+              key={p.id}
+              href={`/registers/programmes/${p.id}`}
+            >
+              <strong>{p.name}</strong>
+              <p>
+                {p.kind} · {p.interval_weeks === 2 ? "Fortnightly" : "Weekly"} ·{" "}
+                {p.active ? "Active" : "Inactive"}
+              </p>
+            </Link>
+          ))}
+        </div>
+        {!programmes?.length ? (
+          <p className="mt-3">No programmes assigned.</p>
+        ) : null}
+        {manager ? (
+          <Link
+            className="btn btn-primary mt-4"
+            href="/registers/programmes/new"
+          >
+            Create programme
+          </Link>
+        ) : null}
+      </section>
       <section className="card p-5">
         <h2 className="text-2xl font-black">
           {manager ? "All sessions" : "Your assigned sessions"}
@@ -321,8 +360,9 @@ export default async function RegistersPage({
         <section className="card p-5">
           <h2 className="text-2xl font-black">Register manager access</h2>
           <p>
-            Administrators need explicit access. Developer status does not grant
-            access to client records.
+            Any active account can be a register manager without becoming a
+            clocking administrator. Developer status does not grant access to
+            client records.
           </p>
           {admins.map((a) => (
             <form
