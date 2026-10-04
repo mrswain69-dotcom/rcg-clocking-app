@@ -63,7 +63,7 @@ test("new migrations enforce verification consent, ownership, register access an
  `);
   const migrationNames = (await readdir("supabase/migrations"))
     .filter((n) =>
-      /_(verification_milestones|session_registers|register_programmes)\.sql$/.test(
+      /_(verification_milestones|session_registers|register_programmes|register_email_delivery_gate)\.sql$/.test(
         n,
       ),
     )
@@ -82,6 +82,29 @@ test("new migrations enforce verification consent, ownership, register access an
             : "user",
       ],
     );
+  await t.test(
+    "attendance email delivery defaults to paused and cannot be enabled by ordinary accounts",
+    async () => {
+      await db.exec("reset role");
+      assert.equal(
+        (
+          await query(
+            "select register_email_enabled from public.settings where id=1",
+          )
+        )[0].register_email_enabled,
+        false,
+      );
+      await as(ids.other);
+      await assert.rejects(
+        query(
+          "update public.settings set register_email_enabled=true where id=1",
+        ),
+        /permission denied/,
+      );
+      await as(ids.owner);
+    },
+  );
+  await db.exec("reset role");
   const visit = (
     await query(
       "insert into public.sessions(profile_id,clock_in_location_status) values($1,'location_unavailable') returning id",

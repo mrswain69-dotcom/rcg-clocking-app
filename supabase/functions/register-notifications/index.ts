@@ -42,6 +42,24 @@ Deno.serve(async (request: Request) => {
       return reply({ error: "Attendance permission required" }, 403);
     if (visibleSession.status !== "confirmed")
       return reply({ error: "Confirm the register first" }, 409);
+    const admin = createClient(
+      url,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      { auth: { persistSession: false } },
+    );
+    const { data: deliverySettings, error: settingsError } = await admin
+      .from("settings")
+      .select("register_email_enabled")
+      .eq("id", 1)
+      .maybeSingle();
+    if (settingsError || deliverySettings?.register_email_enabled !== true)
+      return reply(
+        {
+          error:
+            "Attendance email sending is paused. Attendance remains saved and notifications remain queued.",
+        },
+        503,
+      );
     const apiKey = Deno.env.get("RESEND_API_KEY");
     const from = Deno.env.get("REGISTER_FROM_EMAIL");
     if (Deno.env.get("REGISTER_EMAIL_ENABLED") !== "true" || !apiKey || !from)
@@ -52,11 +70,6 @@ Deno.serve(async (request: Request) => {
         },
         503,
       );
-    const admin = createClient(
-      url,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-      { auth: { persistSession: false } },
-    );
     const { data: jobs, error: claimError } = await admin.rpc(
       "claim_register_notifications",
       { p_session: sessionId },

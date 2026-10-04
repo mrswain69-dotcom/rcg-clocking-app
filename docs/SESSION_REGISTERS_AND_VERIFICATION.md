@@ -39,7 +39,7 @@ Confirmed attendance corrections remain manager-only, including reconfirmation o
 3. Save attendance draft. No emails are queued at this step.
 4. Review saved status and approved recipients. Unsaved changes hide the confirmation controls. The database rejects stale revisions and incomplete registers.
 5. Confirm attendance and notify. The transaction confirms the register and creates one durable notification per linked client/contact. Each email contains only that client's display name, a neutral external session label, scheduled times, recorded attendance and any observed times.
-6. The email worker checks authenticated register access, claims jobs atomically, rechecks approved routing and submits them to Resend. Sending is disabled unless `REGISTER_EMAIL_ENABLED=true` and a verified sender is configured.
+6. The email worker checks authenticated register access, claims jobs atomically, rechecks approved routing and submits them to Resend. Sending is disabled unless `settings.register_email_enabled=true`, `REGISTER_EMAIL_ENABLED=true` and a verified sender are all configured. The database switch defaults to false and the worker fails closed if the switch cannot be read.
 
 Present/late notifications are included by default. Absence notifications require explicit approval per contact. Excused absences are not ordinarily emailed. If an earlier notification was sent, a subsequent manager correction also notifies that recipient even if the corrected status is absent or excused. Corrections require a reason and preserve old/new attendance in the register audit. Draft corrections supersede earlier unsent notifications; already sent messages cannot be recalled.
 
@@ -53,11 +53,11 @@ Register reports search people/session names and filter dates, person and status
 
 ## Deployment and handover
 
-The existing production schema was inspected read-only and matches the prerequisite columns. Production records have not been changed by this build.
+On 4 October 2026, the verification, register, programme and delivery-gate migrations were applied to the RCG Supabase project, and `register-notifications` version 2 was deployed with JWT verification enabled. The database delivery switch is confirmed false. A live SQL smoke test ran using fictitious users/clients inside a transaction and rolled everything back. No test users, clients, registers or notification jobs remain; existing clocking records were not edited. Signed-in browser checks and phone GPS testing remain outstanding.
 
-1. Apply the three new timestamped migrations in order, **before** deploying the frontend that selects their columns. Existing numbered legacy files correspond to older, already applied production migrations; do not replay them or run an unreviewed wholesale database push.
+1. For another environment, apply the four new timestamped migrations in order, **before** deploying the frontend that selects their columns. Existing numbered legacy files correspond to older, already applied production migrations; do not replay them or run an unreviewed wholesale database push.
 2. Deploy `register-notifications`, including `_shared/register-email.ts` and its pinned import map, with JWT verification enabled.
-3. Reuse the existing Resend account/API key and configure `REGISTER_FROM_EMAIL` with a verified sender. Leave `REGISTER_EMAIL_ENABLED` unset/false initially.
+3. Reuse the existing Resend account/API key and configure `REGISTER_FROM_EMAIL` with a verified sender. Leave `REGISTER_EMAIL_ENABLED` unset/false and `settings.register_email_enabled=false` initially. Both switches must be explicitly enabled after test-inbox review.
 4. Deploy the frontend preview and test with fictitious clients, an explicitly approved test inbox, leads and unrelated users. Check phone GPS on site and outside the boundary, active/hidden app behaviour and timed expiry.
 5. Enable register email delivery only after the approved-contact workflow and template are accepted. Do not use real schools/carers for testing.
 6. Owner grants manager capabilities; managers create programmes, allocate clients and assign coordinators/leads/viewers; coordinators review and generate dated registers.
@@ -69,3 +69,5 @@ RCG still needs to agree purpose, sharing authority, privacy information and ret
 `npm test` runs logic tests and the actual new migration SQL in isolated PGlite/Postgres against a fixture matching the existing columns. Tests cover ownership, current user opt-in, rate limits, departure expiry, retained first verification, RLS, lead isolation, developer exclusion, approved-contact checks, stale revisions, transactionally queued minimal notifications, manager corrections, queue claim deduplication and individual roster limits. This does not substitute for a deployment test against Supabase's API/Auth/Edge runtime or real GPS hardware.
 
 Programme validation additionally exercises scoped coordinator/lead/viewer access, permission revocation, independent manager grants, enrolment snapshots, duplicate generation, excluded dates and UK DST.
+
+The privileged live smoke test is in `supabase/tests/register_rollout_smoke.sql`. It requires delivery to be paused, exercises real Supabase table permissions/RPCs with temporary synthetic Auth/profile fixtures, and rolls back the entire transaction. It does not exercise browser login or invoke the email provider.
