@@ -10,7 +10,11 @@ type MobileNavProps = {
   developerLike: boolean;
 };
 
-export function MobileNav({ canViewOnSite, adminLike, developerLike }: MobileNavProps) {
+export function MobileNav({
+  canViewOnSite,
+  adminLike,
+  developerLike,
+}: MobileNavProps) {
   const detailsRef = useRef<HTMLDetailsElement>(null);
   const pathname = usePathname();
 
@@ -43,33 +47,69 @@ export function MobileNav({ canViewOnSite, adminLike, developerLike }: MobileNav
 
   return (
     <nav className="mobile-nav" aria-label="Mobile navigation">
-      <Link href="/dashboard" onClick={closeMore}><span className="mobile-nav-icon">⌂</span><span>Home</span></Link>
-      <Link href="/history" onClick={closeMore}><span className="mobile-nav-icon">▤</span><span>History</span></Link>
+      <Link href="/dashboard" onClick={closeMore}>
+        <span className="mobile-nav-icon">⌂</span>
+        <span>Home</span>
+      </Link>
+      <Link href="/history" onClick={closeMore}>
+        <span className="mobile-nav-icon">▤</span>
+        <span>History</span>
+      </Link>
       {canViewOnSite ? (
-        <Link href="/on-site" onClick={closeMore}><span className="mobile-nav-icon">⌖</span><span>On Site</span></Link>
+        <Link href="/on-site" onClick={closeMore}>
+          <span className="mobile-nav-icon">⌖</span>
+          <span>On Site</span>
+        </Link>
       ) : (
-        <Link href="/account" onClick={closeMore}><span className="mobile-nav-icon">◎</span><span>Account</span></Link>
+        <Link href="/account" onClick={closeMore}>
+          <span className="mobile-nav-icon">◎</span>
+          <span>Account</span>
+        </Link>
       )}
 
       <details className="mobile-more" ref={detailsRef}>
-        <summary><span className="mobile-nav-icon">•••</span><span>More</span></summary>
+        <summary>
+          <span className="mobile-nav-icon">•••</span>
+          <span>More</span>
+        </summary>
         <div className="mobile-more-menu">
-          {canViewOnSite ? <Link href="/account" onClick={closeMore}>◎ <span>Account</span></Link> : null}
+          <Link href="/registers" onClick={closeMore}>
+            ▤ <span>Session registers</span>
+          </Link>
+          {canViewOnSite ? (
+            <Link href="/account" onClick={closeMore}>
+              ◎ <span>Account</span>
+            </Link>
+          ) : null}
           {adminLike ? (
             <>
               <div className="mobile-more-heading">Admin</div>
-              <Link href="/admin" onClick={closeMore}>⚙ <span>Admin dashboard</span></Link>
-              <Link href="/admin/users" onClick={closeMore}>♟ <span>Users</span></Link>
-              <Link href="/admin/reports" onClick={closeMore}>▤ <span>Reports</span></Link>
-              <Link href="/admin/alerts" onClick={closeMore}>⚠ <span>After-hours safety</span></Link>
-              <Link href="/admin/kiosk-devices" onClick={closeMore}>▣ <span>Kiosk devices</span></Link>
-              <Link href="/admin/audit" onClick={closeMore}>≡ <span>Audit log</span></Link>
+              <Link href="/admin" onClick={closeMore}>
+                ⚙ <span>Admin dashboard</span>
+              </Link>
+              <Link href="/admin/users" onClick={closeMore}>
+                ♟ <span>Users</span>
+              </Link>
+              <Link href="/admin/reports" onClick={closeMore}>
+                ▤ <span>Reports</span>
+              </Link>
+              <Link href="/admin/alerts" onClick={closeMore}>
+                ⚠ <span>After-hours safety</span>
+              </Link>
+              <Link href="/admin/kiosk-devices" onClick={closeMore}>
+                ▣ <span>Kiosk devices</span>
+              </Link>
+              <Link href="/admin/audit" onClick={closeMore}>
+                ≡ <span>Audit log</span>
+              </Link>
             </>
           ) : null}
           {developerLike ? (
             <>
               <div className="mobile-more-heading">Technical</div>
-              <Link href="/developer" onClick={closeMore}>⌘ <span>Developer diagnostics</span></Link>
+              <Link href="/developer" onClick={closeMore}>
+                ⌘ <span>Developer diagnostics</span>
+              </Link>
             </>
           ) : null}
         </div>

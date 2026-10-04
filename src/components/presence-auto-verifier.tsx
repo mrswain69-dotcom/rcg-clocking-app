@@ -1,197 +1,104 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { verifyOnSite, type BrowserLocation } from "@/app/(app)/dashboard/actions";
+import { recordSessionLocation } from "@/app/(app)/dashboard/actions";
+import { getBrowserLocation } from "@/lib/browser-location";
+import { nextLocationCheck } from "@/lib/verification";
 
-type Props = {
-  sessionId: string;
-  clockInLocationStatus: string | null;
-  currentPresenceStatus: string | null;
-  currentPresenceSource: string | null;
-  firstOnSiteVerifiedAt: string | null;
-  lastPresenceAccuracyM: number | null;
-  lastPresenceCheckAt: string | null;
-  accuracyLimitM: number;
+export type AutoVerificationSession = {
+  id: string;
+  clock_out_at: string | null;
+  first_on_site_verified_at: string | null;
+  first_off_site_verified_at: string | null;
+  last_presence_check_at: string | null;
+  current_presence_source: string | null;
 };
 
-function formatAccuracy(value: number) {
-  if (value >= 1000) return `±${(value / 1000).toFixed(value >= 10000 ? 0 : 1)} km`;
-  return `±${Math.round(value)} m`;
-}
-
-function getCurrentLocation(): Promise<BrowserLocation> {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(new Error("Geolocation unavailable"));
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => resolve({
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-        accuracy: Number.isFinite(position.coords.accuracy)
-          ? position.coords.accuracy
-          : null,
-      }),
-      reject,
-      {
-        enableHighAccuracy: true,
-        maximumAge: 0,
-        timeout: 15000,
-      },
-    );
-  });
-}
-
 export function PresenceAutoVerifier({
-  sessionId,
-  clockInLocationStatus,
-  currentPresenceStatus,
-  currentPresenceSource,
-  firstOnSiteVerifiedAt,
-  lastPresenceAccuracyM,
-  lastPresenceCheckAt,
-  accuracyLimitM,
-}: Props) {
+  session,
+  periodicEnabled,
+}: {
+  session: AutoVerificationSession;
+  periodicEnabled: boolean;
+}) {
   const router = useRouter();
-  const watchId = useRef<number | null>(null);
-  const submitting = useRef(false);
-  const lastSubmittedAt = useRef(0);
-  const [latestAccuracy, setLatestAccuracy] = useState<number | null>(lastPresenceAccuracyM);
-  const [latestStatus, setLatestStatus] = useState<string | null>(clockInLocationStatus);
-  const [retrying, setRetrying] = useState(false);
-  const [permissionProblem, setPermissionProblem] = useState(
-    clockInLocationStatus === "location_unavailable" && !lastPresenceCheckAt,
-  );
-
-  const shouldTrack =
-    !firstOnSiteVerifiedAt
-    && currentPresenceStatus !== "on_site"
-    && currentPresenceSource !== "user_working_off_site";
-
-  const stopWatching = useCallback(() => {
-    if (watchId.current !== null && navigator.geolocation) {
-      navigator.geolocation.clearWatch(watchId.current);
-      watchId.current = null;
-    }
-  }, []);
-
-  const submitLocation = useCallback(async (location: BrowserLocation, force = false) => {
-    const now = Date.now();
-    if (submitting.current) return;
-    if (!force && now - lastSubmittedAt.current < 45000) return;
-
-    submitting.current = true;
-    lastSubmittedAt.current = now;
-    setLatestAccuracy(location.accuracy);
-    setPermissionProblem(false);
-
-    try {
-      const result = await verifyOnSite(sessionId, location);
-      setLatestStatus(result.locationStatus);
-      setLatestAccuracy(result.reportedAccuracyM);
-
-      if (result.verifiedAt) {
-        stopWatching();
-        router.refresh();
-      }
-    } catch {
-      // The clocking session remains valid even if a background verification call fails.
-    } finally {
-      submitting.current = false;
-    }
-  }, [router, sessionId, stopWatching]);
-
-  const retryNow = useCallback(async () => {
-    setRetrying(true);
-    try {
-      const location = await getCurrentLocation();
-      await submitLocation(location, true);
-    } catch {
-      setPermissionProblem(true);
-      setLatestStatus("location_unavailable");
-    } finally {
-      setRetrying(false);
-    }
-  }, [submitLocation]);
-
+  const [notice, setNotice] = useState<string | null>(null);
   useEffect(() => {
-    if (!shouldTrack || !navigator.geolocation) {
-      stopWatching();
-      return;
-    }
-
-    watchId.current = navigator.geolocation.watchPosition(
-      (position) => {
-        void submitLocation({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          accuracy: Number.isFinite(position.coords.accuracy)
-            ? position.coords.accuracy
-            : null,
-        });
-      },
-      () => {
-        setPermissionProblem(true);
-      },
-      {
-        enableHighAccuracy: true,
-        maximumAge: 0,
-        timeout: 20000,
-      },
-    );
-
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") {
-        void retryNow();
+    let cancelled = false;
+    let busy = false;
+    let attemptedAt = session.last_presence_check_at
+      ? Date.parse(session.last_presence_check_at)
+      : 0;
+    let arrivalVerified = Boolean(session.first_on_site_verified_at);
+    let departureVerified = Boolean(session.first_off_site_verified_at);
+    async function check() {
+      if (busy || cancelled || document.visibilityState !== "visible") return;
+      const now = Date.now();
+      const phase = nextLocationCheck(
+        {
+          ...session,
+          first_on_site_verified_at: arrivalVerified ? "verified" : null,
+          first_off_site_verified_at: departureVerified ? "verified" : null,
+        },
+        periodicEnabled,
+        now,
+        attemptedAt,
+      );
+      if (!phase) return;
+      busy = true;
+      attemptedAt = now;
+      const location = await getBrowserLocation();
+      if (cancelled || document.visibilityState !== "visible") {
+        busy = false;
+        return;
       }
-    };
-
-    document.addEventListener("visibilitychange", handleVisibility);
-
+      try {
+        const result = await recordSessionLocation(session.id, phase, location);
+        if (cancelled) return;
+        if (phase === "departure")
+          departureVerified = Boolean(result.verified_at);
+        else arrivalVerified = Boolean(result.verified_at);
+        setNotice(
+          result.location_status === "location_unavailable"
+            ? "Location unavailable. Attendance is saved; allow location access to verify it."
+            : ["near_boundary", "location_uncertain"].includes(
+                  result.location_status,
+                )
+              ? "Location accuracy is uncertain. Attendance is saved; verification remains pending."
+              : null,
+        );
+        router.refresh();
+      } catch {
+        if (!cancelled)
+          setNotice(
+            "Location check could not be saved. Your attendance record is unaffected.",
+          );
+      } finally {
+        busy = false;
+      }
+    }
+    void check();
+    const timer = window.setInterval(() => void check(), 15000);
+    document.addEventListener("visibilitychange", check);
     return () => {
-      document.removeEventListener("visibilitychange", handleVisibility);
-      stopWatching();
+      cancelled = true;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", check);
     };
-  }, [retryNow, shouldTrack, stopWatching, submitLocation]);
-
-  if (!shouldTrack) return null;
-
-  const accuracyTooLow =
-    latestAccuracy !== null
-    && latestAccuracy > accuracyLimitM;
-
-  const showTechnicalNotice =
-    permissionProblem
-    || accuracyTooLow
-    || latestStatus === "location_uncertain"
-    || latestStatus === "location_unavailable";
-
-  if (!showTechnicalNotice) return null;
-
-  return (
-    <section className="presence-tech-notice" aria-live="polite">
-      <div className="presence-tech-copy">
-        <div className="presence-tech-heading">
-          <span className="presence-tech-dot" aria-hidden="true">!</span>
-          <strong>On-site verification pending</strong>
-        </div>
-        <p>
-          {permissionProblem
-            ? "Location is unavailable. Allow Location and Precise location, then retry."
-            : `Location is only approximate${latestAccuracy !== null ? ` (${formatAccuracy(latestAccuracy)})` : ""}, so RCG cannot be verified yet. Enable Precise location, then retry.`}
-        </p>
-      </div>
-      <button
-        className="btn btn-secondary presence-tech-retry"
-        type="button"
-        onClick={() => void retryNow()}
-        disabled={retrying}
-      >
-        {retrying ? "Checking…" : "Try again"}
-      </button>
-    </section>
-  );
+  }, [
+    session.id,
+    session.clock_out_at,
+    session.first_on_site_verified_at,
+    session.first_off_site_verified_at,
+    session.last_presence_check_at,
+    session.current_presence_source,
+    periodicEnabled,
+    router,
+  ]);
+  return notice ? (
+    <p className="presence-tech-notice" role="status">
+      {notice}
+    </p>
+  ) : null;
 }
