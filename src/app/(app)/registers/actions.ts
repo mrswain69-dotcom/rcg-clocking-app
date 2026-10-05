@@ -10,13 +10,19 @@ export async function registerAction(form: FormData) {
   const data: Record<string, unknown> = Object.fromEntries(form.entries());
   const sessionId = String(form.get("session_id") ?? "");
   const programmeId = String(form.get("programme_id") ?? "");
-  const base = /^[0-9a-f-]{36}$/i.test(programmeId)
-    ? `/registers/programmes/${programmeId}`
-    : /^[0-9a-f-]{36}$/i.test(sessionId)
-      ? `/registers/${sessionId}`
-      : action === "create_programme"
-        ? "/registers/programmes/new"
-        : "/registers";
+  const returnPath = String(form.get("return_path") ?? "");
+  const base =
+    /^\/registers(?:\/[a-z0-9/-]+)?(?:\?tab=(?:clients|contacts|sessions))?$/i.test(
+      returnPath,
+    ) || /^\/admin\/users\/[0-9a-f-]{36}$/i.test(returnPath)
+      ? returnPath
+      : /^[0-9a-f-]{36}$/i.test(programmeId)
+        ? `/registers/programmes/${programmeId}`
+        : /^[0-9a-f-]{36}$/i.test(sessionId)
+          ? `/registers/${sessionId}`
+          : action === "create_programme"
+            ? "/registers/programmes/new"
+            : "/registers";
   let errorMessage: string | null = null;
   let resultId: string | null = null;
   let message = "Saved successfully.";
@@ -30,6 +36,9 @@ export async function registerAction(form: FormData) {
       "sharing_authorised",
       "notify_absence",
       "enabled",
+      "active",
+      "notify_attendance",
+      "notify_departure",
     ])
       data[key] = form.get(key) === "on";
     const programmeActions = [
@@ -75,10 +84,13 @@ export async function registerAction(form: FormData) {
   }
   revalidatePath("/registers", "layout");
   revalidatePath("/account");
+  revalidatePath("/admin/users", "layout");
   if (errorMessage)
-    redirect(`${base}?error=${encodeURIComponent(errorMessage)}`);
+    redirect(
+      `${base}${base.includes("?") ? "&" : "?"}error=${encodeURIComponent(errorMessage)}`,
+    );
   redirect(
-    `${action === "create_programme" ? `/registers/programmes/${resultId}` : action === "create_session" ? `/registers/${resultId}` : base}?message=${encodeURIComponent(message)}`,
+    `${action === "create_programme" ? `/registers/programmes/${resultId}` : action === "create_session" ? `/registers/${resultId}` : base}${base.includes("?") ? "&" : "?"}message=${encodeURIComponent(message)}`,
   );
 }
 
@@ -126,4 +138,52 @@ export async function retryRegisterNotifications(form: FormData) {
   redirect(
     `/registers/${sessionId}?${error ? "error=Email%20delivery%20unavailable.%20The%20register%20remains%20saved." : "message=Notification%20queue%20processed.%20Check%20send%20status%20below."}`,
   );
+}
+
+export type LiveAttendanceInput = AttendanceInput & { marked_at: string };
+export async function recordLiveAttendance(
+  sessionId: string,
+  revision: number,
+  rows: LiveAttendanceInput[],
+  regenerate = false,
+) {
+  const { supabase } = await requireProfile();
+  const values = rows.map((row) => ({
+    ...row,
+    arrived_at:
+      row.status === "present" && row.arrived_at
+        ? londonLocalInputToIso(row.arrived_at)
+        : null,
+    departed_at:
+      row.status === "present" && row.departed_at
+        ? londonLocalInputToIso(row.departed_at)
+        : null,
+    marked_at:
+      ["present", "absent"].includes(row.status) && row.marked_at
+        ? londonLocalInputToIso(row.marked_at)
+        : null,
+  }));
+  const { error } = await supabase.rpc("register_action", {
+    p_action: regenerate ? "regenerate_notifications" : "record_attendance",
+    p_data: {
+      session_id: sessionId,
+      revision,
+      rows: values,
+      reason: regenerate
+        ? "Notification regeneration requested"
+        : "Register observation or time correction",
+    },
+  });
+  if (error) throw new Error(error.message);
+  const { error: deliveryError } = await supabase.functions.invoke(
+    "register-notifications",
+    { body: { session_id: sessionId } },
+  );
+  revalidatePath("/registers", "layout");
+  return {
+    revision: revision + 1,
+    message: deliveryError
+      ? "Saved. Notifications queued; email sending is paused or unavailable."
+      : "Saved. Notification queue processed; check send history.",
+  };
 }

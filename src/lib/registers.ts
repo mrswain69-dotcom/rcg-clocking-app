@@ -1,6 +1,10 @@
 import type { AppProfile } from "@/lib/auth";
 export function isRegisterManager(profile: AppProfile) {
-  return profile.role === "owner" || profile.can_manage_registers;
+  return (
+    profile.role === "owner" ||
+    (profile.can_manage_registers &&
+      profile.register_account_type !== "standard")
+  );
 }
 export type RegisterSession = {
   id: string;
@@ -19,6 +23,7 @@ export type RosterRow = {
   status: string;
   arrived_at: string | null;
   departed_at: string | null;
+  marked_at?: string | null;
 };
 export type RegisterReportRow = {
   session_id: string;
@@ -69,3 +74,10 @@ export function summariseRegisterAttendance(rows: RegisterReportRow[]) {
     a.display_name.localeCompare(b.display_name),
   );
 }
+
+export const registerAccountTypes = {
+  standard: "Standard account · no registers",
+  therapist: "Therapist / session practitioner",
+  senior_manager: "Senior manager",
+  company_owner: "Company owner",
+};

@@ -44,9 +44,9 @@ export default async function RegisterPage({
     { data: leads },
     { data: audit },
   ] = await Promise.all([
-    supabase.rpc("register_roster", { p_session: id }),
+    supabase.rpc("register_live_roster", { p_session: id }),
     take
-      ? supabase.rpc("register_recipient_preview", { p_session: id })
+      ? supabase.rpc("register_routing", { p_session: id })
       : Promise.resolve({ data: null }),
     supabase
       .from("register_notifications")
@@ -97,6 +97,9 @@ export default async function RegisterPage({
     contact_label: string;
     email: string;
     attendance_status: string;
+    notify_attendance: boolean;
+    notify_absence: boolean;
+    notify_departure: boolean;
   }[];
   const missingContacts = rows.filter(
     (r) =>
@@ -320,70 +323,47 @@ export default async function RegisterPage({
         canEdit={
           take &&
           session.status !== "cancelled" &&
-          (!session.confirmed_at || manager)
+          new Date(session.starts_at) <= new Date()
         }
       >
-        {take &&
-        session.status === "draft" &&
-        (!session.confirmed_at || manager) ? (
+        {take ? (
           <section className="card p-5">
-            <h2 className="text-2xl font-black">Review notifications</h2>
+            <h2 className="text-xl font-black">Notification routing</h2>
             <p className="mt-2">
-              Emails use “{session.external_label}”, display names and saved
-              attendance. Each contact receives only their linked client’s
-              record. No case notes are included.
+              Each attendee’s approved contacts receive only that client’s
+              record. Arrival and departure preferences are set on the client
+              contact link. Excused sends no email. Unsent notifications update
+              automatically; changes to sent events create update notifications.
             </p>
             <div className="table-wrap mt-4">
               <table>
                 <thead>
                   <tr>
                     <th>Client</th>
-                    <th>Recipient</th>
-                    <th>Address</th>
-                    <th>Saved status</th>
+                    <th>Approved contact</th>
+                    <th>Attendance</th>
+                    <th>Absence</th>
+                    <th>Departure</th>
                   </tr>
                 </thead>
                 <tbody>
                   {recipientRows.map((k) => (
                     <tr key={`${k.client_id}-${k.email}`}>
                       <td>{k.display_name}</td>
-                      <td>{k.contact_label}</td>
-                      <td>{k.email}</td>
-                      <td>{k.attendance_status}</td>
+                      <td>
+                        {k.contact_label}
+                        <small className="block">{k.email}</small>
+                      </td>
+                      <td>{k.notify_attendance ? "Yes" : "No"}</td>
+                      <td>
+                        {k.notify_attendance && k.notify_absence ? "Yes" : "No"}
+                      </td>
+                      <td>{k.notify_departure ? "Yes" : "No"}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            {!recipientRows.length ? (
-              <p className="mt-3">
-                No emails will be sent for the currently saved attendance.
-              </p>
-            ) : null}
-            {missingContacts.length ? (
-              <p className="mt-3 text-amber-900">
-                No approved contact for:{" "}
-                {missingContacts.map((r) => r.display_name).join(", ")}. These
-                attendees will be recorded without an email.
-              </p>
-            ) : null}
-            <form action={registerAction} className="mt-4 space-y-3">
-              {hidden}
-              <input type="hidden" name="action" value="confirm" />
-              <label className="flex gap-2">
-                <input type="checkbox" required />I have saved the attendance
-                and checked the recipients above.
-              </label>
-              <button
-                className="btn btn-primary"
-                type="submit"
-                disabled={
-                  !rows.length || rows.some((r) => r.status === "unmarked")
-                }
-              >
-                Confirm attendance and notify
-              </button>
-            </form>
           </section>
         ) : null}
       </RegisterWorkspace>
@@ -400,6 +380,7 @@ export default async function RegisterPage({
                 <tr>
                   <th>Client</th>
                   <th>Recipient</th>
+                  <th>Event</th>
                   <th>Status</th>
                   <th>Sent</th>
                   <th>Details</th>
@@ -410,6 +391,10 @@ export default async function RegisterPage({
                   <tr key={n.id}>
                     <td>{n.payload.display_name}</td>
                     <td>{n.recipient}</td>
+                    <td>
+                      {n.payload.event ?? "attendance"}
+                      {n.payload.correction ? " · update" : ""}
+                    </td>
                     <td>{n.status}</td>
                     <td>{formatUkDateTime(n.sent_at)}</td>
                     <td>{n.error ?? "—"}</td>

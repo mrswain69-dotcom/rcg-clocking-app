@@ -23,7 +23,9 @@ export default async function OnSitePage() {
     adminLike
       ? supabase
           .from("profiles")
-          .select("id,full_name,profile_type,attendance_category,organisation,is_active,archived_at")
+          .select(
+            "id,full_name,profile_type,attendance_category,organisation,is_active,archived_at",
+          )
           .eq("is_active", true)
           .is("archived_at", null)
           .order("full_name")
@@ -37,21 +39,30 @@ export default async function OnSitePage() {
         title="Who's on site"
         description="People currently recorded as being at Redcatch Community Garden. This list updates automatically as people clock in and out."
       />
-      {adminLike ? (
-        <AdminAttendanceControls
-          people={peopleData ?? []}
-          openSessions={(data ?? []).map((row) => ({
-            session_id: row.session_id,
-            profile_id: row.profile_id,
-            full_name: row.full_name,
-            clock_in_at: row.clock_in_at,
-            profile_type: row.profile_type,
-            attendance_category: row.attendance_category,
-            organisation: row.organisation,
-          }))}
-        />
-      ) : null}
-      <OnSiteLive initialRows={data ?? []} canRequestPresenceCheck={adminLike} />
+      <div className="flex flex-col gap-6">
+        {adminLike ? (
+          <div className="order-2 md:order-1">
+            <AdminAttendanceControls
+              people={peopleData ?? []}
+              openSessions={(data ?? []).map((row) => ({
+                session_id: row.session_id,
+                profile_id: row.profile_id,
+                full_name: row.full_name,
+                clock_in_at: row.clock_in_at,
+                profile_type: row.profile_type,
+                attendance_category: row.attendance_category,
+                organisation: row.organisation,
+              }))}
+            />
+          </div>
+        ) : null}
+        <div className="order-1 md:order-2">
+          <OnSiteLive
+            initialRows={data ?? []}
+            canRequestPresenceCheck={adminLike}
+          />
+        </div>
+      </div>
     </div>
   );
 }

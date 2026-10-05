@@ -467,3 +467,14 @@ tbody tr:hover { background: rgba(232,244,233,.34); }
   background: #fef2f2;
   border-color: #fca5a5;
 }
+
+@media (max-width: 767px) {
+  .register-taking-table thead { display: none; }
+  .register-taking-table, .register-taking-table tbody { display: block; width: 100%; }
+  .register-taking-table tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .5rem; padding: 1rem 0; border-bottom: 1px solid var(--rcg-border); }
+  .register-taking-table td { display: block; border: 0; padding: .25rem; }
+  .register-taking-table td:first-child { grid-column: 2; grid-row: 1; }
+  .register-taking-table td:nth-child(2) { grid-column: 1; grid-row: 1; }
+  .register-taking-table td:nth-child(n+3) { grid-column: 1 / -1; }
+  .register-taking-table td[data-label]::before { content: attr(data-label); display: block; margin-bottom: .35rem; font-size: .75rem; font-weight: 700; color: var(--rcg-muted); }
+}

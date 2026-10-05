@@ -63,9 +63,12 @@ export default async function AppLayout({
             <Link className="nav-link" href="/history">
               History
             </Link>
-            <Link className="nav-link" href="/registers">
-              Registers
-            </Link>
+            {profile.role === "owner" ||
+            profile.register_account_type !== "standard" ? (
+              <Link className="nav-link" href="/registers">
+                Registers
+              </Link>
+            ) : null}
             {canViewOnSite ? (
               <Link className="nav-link" href="/on-site">
                 On site
@@ -108,6 +111,10 @@ export default async function AppLayout({
       </main>
 
       <MobileNav
+        canAccessRegisters={
+          profile.role === "owner" ||
+          profile.register_account_type !== "standard"
+        }
         canViewOnSite={canViewOnSite}
         adminLike={adminLike}
         developerLike={developerLike}

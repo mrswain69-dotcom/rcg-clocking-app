@@ -8,6 +8,8 @@ export type AttendanceEmailPayload = {
   departed_at: string | null;
   recorded_at: string;
   correction: boolean;
+  event?: "attendance" | "departure";
+  marked_at?: string | null;
 };
 function ukTime(value: string) {
   return new Intl.DateTimeFormat("en-GB", {
@@ -17,13 +19,22 @@ function ukTime(value: string) {
   }).format(new Date(value));
 }
 export function registerEmail(payload: AttendanceEmailPayload) {
-  const status = ["present", "late"].includes(payload.status)
-    ? `${payload.display_name} was recorded as ${payload.status}${payload.arrived_at ? ` at ${ukTime(payload.arrived_at)}` : ` (recorded ${ukTime(payload.recorded_at)})`}.`
-    : `${payload.display_name} was recorded as ${payload.status} for this session.`;
+  const status =
+    payload.event === "departure"
+      ? payload.departed_at
+        ? `${payload.display_name} was recorded as departed at ${ukTime(payload.departed_at)}.`
+        : `${payload.display_name}’s previously recorded departure has been cleared.`
+      : payload.status === "unmarked"
+        ? `${payload.display_name}’s previous attendance mark has been cleared; attendance is currently unconfirmed.`
+        : ["present", "late"].includes(payload.status)
+          ? `${payload.display_name} was recorded as ${payload.status}${payload.arrived_at ? ` at ${ukTime(payload.arrived_at)}` : ` (recorded ${ukTime(payload.recorded_at)})`}.`
+          : `${payload.display_name} was recorded as ${payload.status} for this session${payload.marked_at ? ` at ${ukTime(payload.marked_at)}` : ""}.`;
   return {
     subject: payload.correction
       ? "RCG attendance correction"
-      : "RCG attendance update",
+      : payload.event === "departure"
+        ? "RCG departure update"
+        : "RCG attendance update",
     text: [
       payload.correction
         ? "This corrects an earlier attendance record."
@@ -31,7 +42,7 @@ export function registerEmail(payload: AttendanceEmailPayload) {
       status,
       `Session: ${payload.session}`,
       `Scheduled: ${ukTime(payload.starts_at)} to ${ukTime(payload.ends_at)}`,
-      payload.departed_at
+      payload.event !== "departure" && payload.departed_at
         ? `Observed departure: ${ukTime(payload.departed_at)}`
         : "",
       "This is a saved attendance record, not a live location confirmation.",

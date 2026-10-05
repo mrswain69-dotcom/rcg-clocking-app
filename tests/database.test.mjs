@@ -896,5 +896,302 @@ test("new migrations enforce verification consent, ownership, register access an
       await assert.rejects(phase(visit, "arrival"), /Active account required/);
     },
   );
+
+  await t.test(
+    "live register workflow enforces professional access and separate notification events",
+    async () => {
+      await db.exec("reset role");
+      await db.exec(
+        await readFile(
+          "supabase/migrations/20261005091202_register_directories_and_live_attendance.sql",
+          "utf8",
+        ),
+      );
+      await db.query("update public.profiles set is_active=true where id=$1", [
+        ids.lead,
+      ]);
+      await as(ids.owner);
+      await action("account_access", {
+        profile_id: ids.lead,
+        register_account_type: "standard",
+        enabled: false,
+      });
+      const client = await action("create_client", {
+        full_name: "Live Client Secret",
+        display_name: "Live C.",
+      });
+      const sid = await action("create_session", {
+        name: "Live test",
+        external_label: "RCG session",
+        kind: "group",
+        starts_at: "2026-01-01T10:00:00Z",
+        ends_at: "2026-01-01T12:00:00Z",
+      });
+      let revision = 1;
+      await assert.rejects(
+        action("assign_lead", {
+          session_id: sid,
+          revision,
+          profile_id: ids.lead,
+        }),
+        /Professional account/,
+      );
+      await action("account_access", {
+        profile_id: ids.lead,
+        register_account_type: "therapist",
+        enabled: false,
+      });
+      await action("assign_lead", {
+        session_id: sid,
+        revision,
+        profile_id: ids.lead,
+      });
+      revision++;
+      await action("enrol", { session_id: sid, revision, client_id: client });
+      revision++;
+      const party = await action("create_party", {
+        label: "School office",
+        email: "office@example.invalid",
+        kind: "school",
+        address_verified: true,
+        reason: "Test address verification",
+      });
+      const link = await action("link_contact", {
+        client_id: client,
+        party_id: party,
+        active: true,
+        address_verified: true,
+        sharing_authorised: true,
+        reason: "Test authority",
+        notify_attendance: true,
+        notify_departure: true,
+        notify_absence: true,
+      });
+      const secondParty = await action("create_party", {
+        label: "Departure carer",
+        email: "depart@example.invalid",
+        kind: "carer",
+        address_verified: true,
+        reason: "Test address verification",
+      });
+      await action("link_contact", {
+        client_id: client,
+        party_id: secondParty,
+        active: true,
+        address_verified: true,
+        sharing_authorised: true,
+        reason: "Test authority",
+        notify_attendance: false,
+        notify_departure: true,
+        notify_absence: true,
+      });
+      await as(ids.lead);
+      assert.equal(
+        (await query("select * from public.register_parties")).length,
+        0,
+      );
+      await assert.rejects(
+        action("update_client", {
+          client_id: client,
+          full_name: "Bad edit",
+          display_name: "Bad E.",
+          active: true,
+        }),
+        /manager permission/,
+      );
+      const rows = [
+        {
+          client_id: client,
+          status: "present",
+          arrived_at: "2026-01-01T10:01:00Z",
+          marked_at: "2026-01-01T10:01:00Z",
+          departed_at: null,
+        },
+      ];
+      const record = async (r, regen = false) => {
+        await action(regen ? "regenerate_notifications" : "record_attendance", {
+          session_id: sid,
+          revision,
+          rows: r,
+        });
+        revision++;
+      };
+      await record(rows);
+      let jobs = await query(
+        "select * from public.register_notifications where session_id=$1 and status='pending'",
+        [sid],
+      );
+      assert.equal(jobs.length, 1);
+      assert.equal(jobs[0].event, "attendance");
+      assert(!JSON.stringify(jobs[0].payload).includes("Secret"));
+      const jobId = jobs[0].id;
+      rows[0].arrived_at = rows[0].marked_at = "2026-01-01T10:05:00Z";
+      await record(rows);
+      jobs = await query(
+        "select * from public.register_notifications where session_id=$1 and status='pending'",
+        [sid],
+      );
+      assert.equal(jobs.length, 1);
+      assert.equal(jobs[0].id, jobId);
+      assert.equal(
+        new Date(jobs[0].payload.arrived_at).toISOString(),
+        "2026-01-01T10:05:00.000Z",
+      );
+      await db.exec("reset role");
+      await db.query(
+        "update public.register_notifications set status='sent',sent_at=now() where id=$1",
+        [jobId],
+      );
+      await as(ids.lead);
+      rows[0].arrived_at = rows[0].marked_at = "2026-01-01T10:06:00Z";
+      await record(rows);
+      jobs = await query(
+        "select * from public.register_notifications where session_id=$1 and status='pending'",
+        [sid],
+      );
+      assert.equal(jobs.length, 1);
+      assert.equal(jobs[0].payload.correction, true);
+      assert.notEqual(jobs[0].id, jobId);
+      rows[0].departed_at = "2026-01-01T11:00:00Z";
+      await record(rows);
+      jobs = await query(
+        "select * from public.register_notifications where session_id=$1 and status='pending'",
+        [sid],
+      );
+      assert.equal(jobs.filter((j) => j.event === "departure").length, 2);
+      assert.equal(jobs.filter((j) => j.event === "attendance").length, 1);
+      await record([
+        {
+          client_id: client,
+          status: "excused",
+          arrived_at: null,
+          departed_at: null,
+          marked_at: null,
+        },
+      ]);
+      assert.equal(
+        (
+          await query(
+            "select * from public.register_notifications where session_id=$1 and status='pending'",
+            [sid],
+          )
+        ).length,
+        0,
+      );
+      await record([
+        {
+          client_id: client,
+          status: "absent",
+          arrived_at: null,
+          departed_at: null,
+          marked_at: "2026-01-01T10:15:00Z",
+        },
+      ]);
+      jobs = await query(
+        "select * from public.register_notifications where session_id=$1 and status='pending'",
+        [sid],
+      );
+      assert.equal(jobs.filter((j) => j.event === "attendance").length, 1);
+      await assert.rejects(
+        action("record_attendance", {
+          session_id: sid,
+          revision: revision - 1,
+          rows,
+        }),
+        /Register changed/,
+      );
+      await as(ids.owner);
+      await action("update_party", {
+        party_id: party,
+        label: "School renamed",
+        email: "new@example.invalid",
+        kind: "school",
+        phone: "01234",
+        active: true,
+        address_verified: true,
+        reason: "Verified new address",
+      });
+      assert.equal(
+        (
+          await query(
+            "select * from public.register_notifications where session_id=$1 and status='pending'",
+            [sid],
+          )
+        ).length,
+        0,
+      );
+      await record(rows, true);
+      jobs = await query(
+        "select * from public.register_notifications where session_id=$1 and status='pending'",
+        [sid],
+      );
+      assert(jobs.some((j) => j.recipient === "new@example.invalid"));
+      await action("update_contact", {
+        contact_id: link,
+        active: false,
+        notify_attendance: true,
+        notify_departure: true,
+        notify_absence: true,
+      });
+      await assert.rejects(
+        action("update_contact", {
+          contact_id: link,
+          active: true,
+          notify_attendance: true,
+          notify_departure: true,
+          notify_absence: true,
+        }),
+        /Verify address/,
+      );
+      await action("update_contact", {
+        contact_id: link,
+        active: true,
+        notify_attendance: true,
+        notify_departure: false,
+        notify_absence: true,
+        address_verified: true,
+        sharing_authorised: true,
+        reason: "Rechecked authority",
+      });
+      await action("account_access", {
+        profile_id: ids.lead,
+        register_account_type: "standard",
+        enabled: false,
+      });
+      await as(ids.lead);
+      assert.equal(
+        (
+          await query("select * from public.register_sessions where id=$1", [
+            sid,
+          ])
+        ).length,
+        0,
+      );
+      await assert.rejects(
+        action("record_attendance", { session_id: sid, revision, rows }),
+        /Attendance permission/,
+      );
+      await assert.rejects(
+        action("account_access", {
+          profile_id: ids.lead,
+          register_account_type: "company_owner",
+          enabled: true,
+        }),
+        /Owner permission/,
+      );
+      await assert.rejects(
+        db.query(
+          "update public.profiles set register_account_type='company_owner' where id=$1",
+          [ids.lead],
+        ),
+        /permission denied/,
+      );
+      await as(null, "anon");
+      await assert.rejects(
+        query("select * from public.register_parties"),
+        /permission denied/,
+      );
+    },
+  );
   await db.close();
 });

@@ -127,3 +127,10 @@ test("email reports an observation without promising current presence, including
   assert.match(message.text, /Alex B. was recorded as present/);
   assert.match(message.text, /not a live location confirmation/);
 });
+
+test("departure notifications and cleared marks use distinct event wording", () => {
+ const base={display_name:"Alex B.",session:"RCG session",starts_at:"2026-10-03T09:00:00Z",ends_at:"2026-10-03T11:00:00Z",status:"present",arrived_at:null,departed_at:"2026-10-03T10:30:00Z",recorded_at:"2026-10-03T10:30:00Z",correction:false,event:"departure"};
+ const departure=registerEmail(base);assert.equal(departure.subject,"RCG departure update");assert.match(departure.text,/recorded as departed/);assert.doesNotMatch(departure.text,/recorded as present/);
+ const cleared=registerEmail({...base,status:"unmarked",departed_at:null,event:"attendance",correction:true});assert.match(cleared.text,/previous attendance mark has been cleared/);
+ const absent=registerEmail({...base,status:"absent",departed_at:null,event:"attendance",marked_at:"2026-10-03T09:05:00Z"});assert.match(absent.text,/recorded as absent/);assert.match(absent.text,/10:05/);
+});

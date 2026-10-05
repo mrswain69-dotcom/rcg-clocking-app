@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/brand/PageHeader";
 import { requireAdminProfile } from "@/lib/auth";
+import { registerAction } from "../../../registers/actions";
+import { registerAccountTypes } from "@/lib/registers";
 import { formatUkDateTime, londonDateTimeLocalValue } from "@/lib/dates";
 import {
   arrivalDelayMinutes,
@@ -15,10 +17,11 @@ import { promoteAttendancePerson, setAttendanceCategory } from "../actions";
 
 export const metadata: Metadata = { title: "User attendance" };
 
-export default async function AdminUserPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function AdminUserPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{error?:string;message?:string}> }) {
+  const query = await searchParams;
   const { id } = await params;
-  const { supabase } = await requireAdminProfile();
-  const { data: user } = await supabase.from("profiles").select("id,full_name,email,role,profile_type,attendance_category,organisation,is_active").eq("id", id).maybeSingle();
+  const { supabase, profile: actor } = await requireAdminProfile();
+  const { data: user } = await supabase.from("profiles").select("id,full_name,email,role,profile_type,attendance_category,organisation,is_active,register_account_type,can_manage_registers").eq("id", id).maybeSingle();
   if (!user) notFound();
 
   const { data } = await supabase
@@ -38,6 +41,8 @@ export default async function AdminUserPage({ params }: { params: Promise<{ id: 
         action={<Link className="btn btn-secondary" href="/admin/users">← Users</Link>}
       />
 
+      {query.error ? <p role="alert" className="text-red-800">{query.error}</p> : null}
+      {query.message ? <p role="status">{query.message}</p> : null}
       <section className="card p-5 sm:p-6">
         <div className="mb-5">
           <p className="section-kicker">Person record</p>
@@ -91,6 +96,80 @@ export default async function AdminUserPage({ params }: { params: Promise<{ id: 
           </details>
         ) : null}
       </section>
+
+      {user.profile_type === "account" ? (
+        <section className="card p-5">
+          <h2 className="text-2xl font-black">
+            Professional account & register access
+          </h2>
+          <p className="mt-2">
+            Attendance classification, clocking administration and client
+            register access are separate. Standard accounts have no register
+            access. Eligible professionals see only explicitly assigned
+            programmes or sessions; register managers manage all registers,
+            clients and contact routing. Only an owner can change these
+            permissions.
+          </p>
+          <p className="mt-3 font-bold">
+            {
+              registerAccountTypes[
+                user.register_account_type as keyof typeof registerAccountTypes
+              ]
+            }{" "}
+            ·{" "}
+            {user.role === "owner"
+              ? "Owner: all register permissions"
+              : user.can_manage_registers
+                ? "Register manager"
+                : "Assigned registers only, if eligible"}
+          </p>
+          {actor.role === "owner" ? (
+            <form
+              action={registerAction}
+              className="mt-4 grid gap-4 sm:grid-cols-2"
+            >
+              <input type="hidden" name="action" value="account_access" />
+              <input type="hidden" name="profile_id" value={id} />
+              <input
+                type="hidden"
+                name="return_path"
+                value={`/admin/users/${id}`}
+              />
+              <label>
+                Professional account type
+                <select
+                  name="register_account_type"
+                  className="input"
+                  defaultValue={user.register_account_type}
+                >
+                  {Object.entries(registerAccountTypes).map(
+                    ([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ),
+                  )}
+                </select>
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  name="enabled"
+                  defaultChecked={user.can_manage_registers}
+                />
+                Register manager · all programmes, sessions and directories
+              </label>
+              <p className="text-sm">
+                Changing to Standard removes all programme and session grants.
+                Owner access is built in.
+              </p>
+              <button className="btn btn-primary">
+                Save account & register access
+              </button>
+            </form>
+          ) : null}
+        </section>
+      ) : null}
 
       <section className="card p-5 sm:p-6">
         <div className="mb-5">
