@@ -40,8 +40,12 @@ export default async function OnSitePage() {
         description="People currently recorded as being at Redcatch Community Garden. This list updates automatically as people clock in and out."
       />
       <div className="flex flex-col gap-6">
+        <OnSiteLive
+          initialRows={data ?? []}
+          canRequestPresenceCheck={adminLike}
+        />
         {adminLike ? (
-          <div className="order-2 md:order-1">
+          <div>
             <AdminAttendanceControls
               people={peopleData ?? []}
               openSessions={(data ?? []).map((row) => ({
@@ -56,12 +60,6 @@ export default async function OnSitePage() {
             />
           </div>
         ) : null}
-        <div className="order-1 md:order-2">
-          <OnSiteLive
-            initialRows={data ?? []}
-            canRequestPresenceCheck={adminLike}
-          />
-        </div>
       </div>
     </div>
   );
