@@ -16,6 +16,11 @@ export type AppProfile = {
   archived_at: string | null;
   periodic_location_checks: boolean;
   can_manage_registers: boolean;
+  register_account_type:
+    | "standard"
+    | "therapist"
+    | "senior_manager"
+    | "company_owner";
 };
 
 export async function requireProfile() {
@@ -29,7 +34,7 @@ export async function requireProfile() {
   const { data: profile, error } = await supabase
     .from("profiles")
     .select(
-      "id,user_id,full_name,email,role,is_active,can_view_currently_on_site,can_use_kiosk,can_receive_safety_alerts,archived_at,periodic_location_checks,can_manage_registers",
+      "id,user_id,full_name,email,role,is_active,can_view_currently_on_site,can_use_kiosk,can_receive_safety_alerts,archived_at,periodic_location_checks,can_manage_registers,register_account_type",
     )
     .eq("user_id", userId)
     .single();

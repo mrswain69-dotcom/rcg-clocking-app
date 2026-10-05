@@ -83,7 +83,9 @@ Deno.serve(async (request: Request) => {
         await Promise.all([
           admin
             .from("register_contacts")
-            .select("email,active,client_id")
+            .select(
+              "email,active,client_id,party_id,notify_attendance,notify_departure,notify_absence",
+            )
             .eq("id", job.contact_id)
             .maybeSingle(),
           admin
@@ -97,8 +99,29 @@ Deno.serve(async (request: Request) => {
             .eq("id", job.id)
             .maybeSingle(),
         ]);
+      const [{ data: party }, { data: client }] = await Promise.all([
+        contact?.party_id
+          ? admin
+              .from("register_parties")
+              .select("active,email")
+              .eq("id", contact.party_id)
+              .maybeSingle()
+          : Promise.resolve({ data: null }),
+        admin
+          .from("register_clients")
+          .select("active")
+          .eq("id", job.client_id)
+          .maybeSingle(),
+      ]);
       if (
         !contact?.active ||
+        !client?.active ||
+        (contact.party_id &&
+          (!party?.active || party.email !== job.recipient)) ||
+        (job.event === "departure"
+          ? !contact.notify_departure
+          : !contact.notify_attendance ||
+            (job.payload.status === "absent" && !contact.notify_absence)) ||
         contact.email !== job.recipient ||
         contact.client_id !== job.client_id ||
         session?.status !== "confirmed" ||

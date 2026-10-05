@@ -6,11 +6,13 @@ import { useEffect, useRef } from "react";
 
 type MobileNavProps = {
   canViewOnSite: boolean;
+  canAccessRegisters: boolean;
   adminLike: boolean;
   developerLike: boolean;
 };
 
 export function MobileNav({
+  canAccessRegisters,
   canViewOnSite,
   adminLike,
   developerLike,
@@ -73,9 +75,11 @@ export function MobileNav({
           <span>More</span>
         </summary>
         <div className="mobile-more-menu">
-          <Link href="/registers" onClick={closeMore}>
-            ▤ <span>Session registers</span>
-          </Link>
+          {canAccessRegisters ? (
+            <Link href="/registers" onClick={closeMore}>
+              ▤ <span>Session registers</span>
+            </Link>
+          ) : null}
           {canViewOnSite ? (
             <Link href="/account" onClick={closeMore}>
               ◎ <span>Account</span>

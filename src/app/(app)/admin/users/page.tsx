@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeader } from "@/components/brand/PageHeader";
 import { requireAdminProfile } from "@/lib/auth";
+import { registerAccountTypes } from "@/lib/registers";
 import { formatUkDateTime } from "@/lib/dates";
 import {
   createUser,
@@ -31,7 +32,7 @@ export default async function AdminUsersPage() {
   const { supabase, profile: actor } = await requireAdminProfile();
   const { data } = await supabase
     .from("profiles")
-    .select("id,full_name,email,role,profile_type,attendance_category,organisation,is_active,can_view_currently_on_site,can_use_kiosk,kiosk_user_enabled,short_code,archived_at")
+    .select("id,full_name,email,role,profile_type,attendance_category,organisation,is_active,can_view_currently_on_site,can_use_kiosk,kiosk_user_enabled,short_code,archived_at,register_account_type,can_manage_registers")
     .order("full_name");
   const users = data ?? [];
   const activeCount = users.filter((user) => user.is_active).length;
@@ -84,7 +85,7 @@ export default async function AdminUsersPage() {
         </div>
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Person</th><th>Type</th><th>Role</th><th>Presence</th><th>Kiosk</th><th>PIN</th><th>Status</th>{actor.role === "owner" ? <th>Owner action</th> : null}</tr></thead>
+            <thead><tr><th>Person</th><th>Type</th><th>Role</th><th>Register access</th><th>Presence</th><th>Kiosk</th><th>PIN</th><th>Status</th>{actor.role === "owner" ? <th>Owner action</th> : null}</tr></thead>
             <tbody>{users.map((user) => (
               <tr key={user.id}>
                 <td>
@@ -120,6 +121,7 @@ export default async function AdminUsersPage() {
                   <div className="mt-1 text-xs text-[var(--rcg-muted)]">{categoryLabel(user.attendance_category)}</div>
                 </td>
                 <td>{user.profile_type === "attendance_only" ? <span className="badge !bg-slate-100 !text-slate-700">Attendance only</span> : actor.role === "owner" && user.role !== "owner" ? <form action={setUserRole} className="flex gap-2"><input type="hidden" name="profileId" value={user.id} /><select className="input !min-h-9 !w-auto !py-1" name="role" defaultValue={user.role}><option value="user">User</option><option value="admin">Admin</option><option value="developer">Developer</option></select><button className="btn btn-soft !min-h-9 !px-3" type="submit">Save</button></form> : <span className="badge">{user.role}</span>}</td>
+                <td><span className="text-sm">{user.role === "owner" ? "Owner · all registers" : user.profile_type === "attendance_only" || user.register_account_type === "standard" ? "No register access" : `${registerAccountTypes[user.register_account_type as keyof typeof registerAccountTypes]} · ${user.can_manage_registers ? "Register manager" : "Explicit assignments only"}`}</span><Link className="block underline text-sm" href={`/admin/users/${user.id}`}>Details & permissions</Link></td>
                 <td>{user.profile_type === "attendance_only" ? <span className="text-xs font-bold text-[var(--rcg-muted)]">No app access</span> : <form action={setPresenceVisibility} className="flex gap-2"><input type="hidden" name="profileId" value={user.id} /><select className="input !min-h-9 !w-auto !py-1" name="enabled" defaultValue={String(user.can_view_currently_on_site)}><option value="false">No</option><option value="true">Yes</option></select><button className="btn btn-soft !min-h-9 !px-3" type="submit">Save</button></form>}</td>
                 <td>{user.profile_type === "attendance_only" ? <span className="text-xs font-bold text-[var(--rcg-muted)]">Kiosk attendance only</span> : <div><form action={setKioskAccess} className="flex gap-2"><input type="hidden" name="profileId" value={user.id} /><select className="input !min-h-9 !w-auto !py-1" name="enabled" defaultValue={String(user.can_use_kiosk)}><option value="true">Allowed</option><option value="false">Blocked</option></select><button className="btn btn-soft !min-h-9 !px-3" type="submit">Save</button></form><div className="mt-1 text-xs text-[var(--rcg-muted)]">{!user.can_use_kiosk ? "Management blocked" : user.kiosk_user_enabled ? "User setup enabled" : "Allowed · user not enabled"}</div></div>}</td>
                 <td>{user.profile_type === "attendance_only" ? <span className="text-xs font-bold text-[var(--rcg-muted)]">No PIN</span> : <form action={resetPin} className="flex min-w-48 gap-2"><input type="hidden" name="profileId" value={user.id} /><input className="input !min-h-9 !w-24 !py-1" name="pin" type="password" inputMode="numeric" pattern="[0-9]{4,6}" placeholder="4–6 digits" required /><button className="btn btn-soft !min-h-9 !px-3" type="submit">Reset</button></form>}</td>
